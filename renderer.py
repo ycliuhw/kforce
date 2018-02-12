@@ -12,16 +12,8 @@ import yaml
 from botocore.errorfactory import ClientError
 from jinja2 import Template
 
-try:
-    from colorama import Fore, Back, Style, init
-    init()
-except ImportError:  # fallback so that the imported classes always exist
-
-    class ColorFallback():
-        def __getattr__(self, name):
-            return ''
-
-    Fore = Back = Style = ColorFallback()
+from .utils import color_diff
+from .aws_facts import get_vpc_facts
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s'
@@ -34,54 +26,13 @@ logging.getLogger(BOTO_LOGGER_NAME).setLevel(
 
 CWD = os.getcwd()
 TEMPLATE_DIR = os.path.join(CWD, 'templates')
+
 ENVS = (
     's',  # stage
     'u',  # uat
     'p',  # prod
     'm',  # management
 )
-
-SUBNET_GROUPS = (
-    'public',
-    'private',
-)
-
-
-def color_diff(diff):
-    for line in diff:
-        if line.startswith('+'):
-            yield Fore.GREEN + line + Fore.RESET
-        elif line.startswith('-'):
-            yield Fore.RED + line + Fore.RESET
-        elif line.startswith('^'):
-            yield Fore.BLUE + line + Fore.RESET
-        else:
-            yield line
-
-
-def check_rt_internet_facing(facing, route_table):
-    assert facing in SUBNET_GROUPS, 'facing has to be in %s' % SUBNET_GROUPS
-    routes_facing_igw = [
-        route for route in route_table.routes
-        if route.state == 'active'
-        and route.gateway_id is not None
-        and route.gateway_id.startswith('igw-')
-    ]  # yapf: disable
-    routes_facing_nat = [
-        route for route in route_table.routes
-        if route.state == 'active'
-        and route.nat_gateway_id is not None
-        and route.nat_gateway_id.startswith('nat-')
-    ]  # yapf: disable
-    nat_id = None
-    try:
-        nat_id = routes_facing_nat[0].nat_gateway_id
-    except (AttributeError, IndexError):
-        ...
-    if facing == 'public':
-        return len(routes_facing_igw) > 0, nat_id
-    elif facing == 'private':
-        return len(routes_facing_igw) == 0 and len(routes_facing_nat) > 0, nat_id  # yapf: disable
 
 
 class KopsRenderer(object):
@@ -129,44 +80,10 @@ class KopsRenderer(object):
 
     def ensure_aws_facts(self):
 
-        ec2_c = boto3.resource('ec2')
-        vpc_c = ec2_c.Vpc(id=self.vpc_id)
-
-        vpc = dict(id=self.vpc_id, cidr=vpc_c.cidr_block)
-
-        azs = set()
-        for facing in SUBNET_GROUPS:
-            subnets = set()
-            for rt in vpc_c.route_tables.all():
-                is_facing_true, nat_id = check_rt_internet_facing(facing, rt)
-                if is_facing_true:
-                    for ass in rt.associations:
-                        if ass.main is True:
-                            # ignore main
-                            continue
-                        subnet = ass.subnet
-                        subnets.add(subnet.id)
-                        azs.add(subnet.availability_zone)
-
-                        vpc['-'.join(
-                            ['subnet', facing, subnet.availability_zone]
-                        )] = [subnet.id]
-                        zone = subnet.availability_zone[-1]
-                        vpc[zone] = vpc.get(zone, {})
-                        vpc[zone][facing] = dict(
-                            id=subnet.id, cidr=subnet.cidr_block
-                        )
-                        if facing == 'private' and nat_id is not None:
-                            vpc[zone][facing]['nat_id'] = nat_id
-
-            vpc['%s_subnets' % facing] = list(subnets)
-
-        vpc_facts = dict(azs=list(azs), vpc=vpc)
-
+        self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
         logger.debug(
-            'vpc_facts -> \n%s', pformat(vpc_facts, indent=4, width=120)
+            'vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120)
         )
-        self.vpc_facts = vpc_facts
 
     def __prepare(self):
         # ugly but useful
