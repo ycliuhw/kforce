@@ -43,11 +43,11 @@ def get_vpc_facts(vpc_id):
         for rt in vpc_c.route_tables.all():
             is_facing_true, nat_id = check_rt_internet_facing(facing, rt)
             if is_facing_true:
-                for ass in rt.associations:
-                    if ass.main is True:
+                for asso in rt.associations:
+                    if asso.main is True:
                         # ignore main
                         continue
-                    subnet = ass.subnet
+                    subnet = asso.subnet
                     subnets.add(subnet.id)
                     azs.add(subnet.availability_zone)
 

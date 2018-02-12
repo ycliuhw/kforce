@@ -48,7 +48,7 @@ class KopsRenderer(object):
 
         if not (env and account_name and vpc_id):
             raise ValueError(
-                'env -> `{}`, account_name -> `{}, vpc_id -> {}` are required!! '.
+                'env -> `{}`, account_name -> `{}`, vpc_id -> `{}` are required!! '.
                 format(env, account_name, vpc_id)
             )
         if env not in ENVS:
