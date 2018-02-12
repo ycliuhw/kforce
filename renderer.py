@@ -12,8 +12,8 @@ import yaml
 from botocore.errorfactory import ClientError
 from jinja2 import Template
 
-from .utils import color_diff
 from .aws_facts import get_vpc_facts
+from .utils import color_diff
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s'
