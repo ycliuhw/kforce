@@ -42,24 +42,23 @@ def get_vpc_facts(vpc_id):
         subnets = set()
         for rt in vpc_c.route_tables.all():
             is_facing_true, nat_id = check_rt_internet_facing(facing, rt)
-            if is_facing_true:
-                for asso in rt.associations:
-                    if asso.main is True:
-                        # ignore main
-                        continue
-                    subnet = asso.subnet
-                    subnets.add(subnet.id)
-                    azs.add(subnet.availability_zone)
+            if not is_facing_true:
+                continue
+            for asso in rt.associations:
+                if asso.main is True:
+                    # ignore main
+                    continue
+                subnet = asso.subnet
+                subnets.add(subnet.id)
+                azs.add(subnet.availability_zone)
 
-                    vpc['-'.join(['subnet', facing,
-                                  subnet.availability_zone])] = [subnet.id]
-                    zone = subnet.availability_zone[-1]
-                    vpc[zone] = vpc.get(zone, {})
-                    vpc[zone][facing] = dict(
-                        id=subnet.id, cidr=subnet.cidr_block
-                    )
-                    if facing == 'private' and nat_id is not None:
-                        vpc[zone][facing]['nat_id'] = nat_id
+                vpc['-'.join(['subnet', facing,
+                              subnet.availability_zone])] = [subnet.id]
+                zone = subnet.availability_zone[-1]
+                vpc[zone] = vpc.get(zone, {})
+                vpc[zone][facing] = dict(id=subnet.id, cidr=subnet.cidr_block)
+                if facing == 'private' and nat_id is not None:
+                    vpc[zone][facing]['nat_id'] = nat_id
 
         vpc['%s_subnets' % facing] = list(subnets)
 

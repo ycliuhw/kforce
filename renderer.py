@@ -101,11 +101,12 @@ class KopsRenderer(object):
             os.makedirs(self.tmp_dir)
 
         for i in dir(self):
-            if i.startswith('ensure'):
-                f = getattr(self, i)
-                if callable(f):
-                    logger.info('doing -> %s', i)
-                    f()
+            if not i.startswith('ensure'):
+                continue
+            f = getattr(self, i)
+            if callable(f):
+                logger.info('doing -> %s', i)
+                f()
 
     def ensure_ssh_pair(self):
         # ensure aws ec2 key pair
