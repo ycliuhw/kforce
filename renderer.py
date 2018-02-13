@@ -219,7 +219,7 @@ class KopsRenderer(object):
 
     def __exec(self, cmd):
         cmd_splitted = [i for i in cmd.split(' ') if i]
-        logger.debug(
+        logger.info(
             '__exec: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s',
             self.env, self.account_name, cmd, cmd_splitted
         )
