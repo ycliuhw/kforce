@@ -36,7 +36,7 @@ pytest:
 
 
 .PHONY: test
-test: install-deps isort yapf  pytest
+test: isort yapf  pytest
 
 
 PHONY: install
