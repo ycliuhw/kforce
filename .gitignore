@@ -4,3 +4,19 @@ venv/
 tmp/
 dist
 build
+*.swap
+
+# Vim swap files
+*.swp
+*.swo
+credentials.yml
+# test output
+*.retry
+*.out
+.tox
+.cache
+results.xml
+coverage.xml
+/test/units/cover-html
+/test/integration/targets/*/backup/
+/test/cache/*
