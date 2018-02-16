@@ -52,8 +52,7 @@ def get_vpc_facts(vpc_id):
                 subnets.add(subnet.id)
                 azs.add(subnet.availability_zone)
 
-                vpc['-'.join(['subnet', facing,
-                              subnet.availability_zone])] = [subnet.id]
+                vpc['-'.join(['subnet', facing, subnet.availability_zone])] = [subnet.id]
                 zone = subnet.availability_zone[-1]
                 vpc[zone] = vpc.get(zone, {})
                 vpc[zone][facing] = dict(id=subnet.id, cidr=subnet.cidr_block)

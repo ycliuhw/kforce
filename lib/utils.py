@@ -4,6 +4,7 @@ try:
 except ImportError:  # fallback so that the imported classes always exist
 
     class ColorFallback():
+
         def __getattr__(self, name):
             return ''
 

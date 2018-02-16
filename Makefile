@@ -22,16 +22,16 @@ install: ensure_venv
 
 .PHONY: isort
 isort:
-	isort --recursive --check-only --quiet kforce bin
+	. $(virtualenv_dir)/bin/activate; isort --recursive --check-only --quiet lib/ bin/
 
 
-.PHONY: flake8
-flake8:
-	flake8 kforce/ bin/
+.PHONY: yapf
+yapf:
+	. $(virtualenv_dir)/bin/activate; yapf --recursive --in-place lib/ bin/
 
 
 .PHONY: test
-test: install isort flake8  # pytest
+test: install isort yapf  # pytest
 
 
 .PHONY: ensure_iam

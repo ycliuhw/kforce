@@ -15,14 +15,10 @@ from jinja2 import Template
 from .aws_facts import get_vpc_facts
 from .utils import color_diff
 
-logging.basicConfig(
-    level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 BOTO_LOGGER_NAME = 'botocore'
-logging.getLogger(BOTO_LOGGER_NAME).setLevel(
-    logging.CRITICAL
-)  # boto logging is annony and too verbose
+logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.CRITICAL)  # boto logging is annony and too verbose
 
 CWD = os.getcwd()
 TEMPLATE_DIR = os.path.join(CWD, 'templates')
@@ -39,17 +35,14 @@ class KopsRenderer(object):
 
     vpc_facts = None
 
-    def __init__(
-        self, env, account_name, vpc_id, region='ap-southeast-2', debug=False
-    ):
+    def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False):
         if debug is True:
             logger.setLevel(logging.DEBUG)
             logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.DEBUG)
 
         if not (env and account_name and vpc_id):
             raise ValueError(
-                'env -> `{}`, account_name -> `{}`, vpc_id -> `{}` are required!! '.
-                format(env, account_name, vpc_id)
+                'env -> `{}`, account_name -> `{}`, vpc_id -> `{}` are required!! '.format(env, account_name, vpc_id)
             )
         if env not in ENVS:
             raise ValueError('env -> `{}` has be in `{}`'.format(env, ENVS))
@@ -58,38 +51,27 @@ class KopsRenderer(object):
         self.vpc_id = vpc_id
         self.region = region
 
-        self.cluster_name = '{}-{}.k8s.local'.format(
-            self.account_name, self.env
-        )
+        self.cluster_name = '{}-{}.k8s.local'.format(self.account_name, self.env)
         self.state_store_name = '%s-k8s-state-store' % self.account_name
         self.state_store_uri = 's3://' + self.state_store_name
         self.current_vars_dir = os.path.join(CWD, 'vars', self.account_name)
         self.tmp_dir = os.path.join(CWD, 'tmp')
         self.path_template_rendered = os.path.join(
-            CWD, '__generated__',
-            '{}-{}.yaml'.format(self.account_name, self.env)
+            CWD, '__generated__', '{}-{}.yaml'.format(self.account_name, self.env)
         )
-        self.current_values_path = os.path.join(
-            self.current_vars_dir, '%s.yaml' % self.env
-        )
-        self.paths_root_templates = (
-            os.path.join(TEMPLATE_DIR, 'cluster.yaml'),
-        )
+        self.current_values_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
+        self.paths_root_templates = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
 
         self.__prepare()
 
     def ensure_aws_facts(self):
 
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
-        logger.debug(
-            'vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120)
-        )
+        logger.debug('vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120))
 
     def __prepare(self):
         # ugly but useful
-        os.environ['AWS_DEFAULT_REGION'] = os.environ.get(
-            'AWS_DEFAULT_REGION', None
-        ) or self.region
+        os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
 
         # ugly but it's required
         try:
@@ -115,18 +97,12 @@ class KopsRenderer(object):
             with open(self.current_values_path) as f:
                 public_key_material = yaml.load(f.read())[public_key_name]
         except KeyError as e:
-            e.args += (
-                '`{}` is a required var, define it in {}'.format(
-                    public_key_name, self.current_values_path
-                ),
-            )
+            e.args += ('`{}` is a required var, define it in {}'.format(public_key_name, self.current_values_path), )
             raise e
         ec2_key_pair_key = self.cluster_name
         try:
             ec2 = boto3.client('ec2')
-            ec2.import_key_pair(
-                KeyName=ec2_key_pair_key, PublicKeyMaterial=public_key_material
-            )
+            ec2.import_key_pair(KeyName=ec2_key_pair_key, PublicKeyMaterial=public_key_material)
         except ClientError as e:
             if e.response['Error']['Code'] != 'InvalidKeyPair.Duplicate':
                 raise e
@@ -137,9 +113,7 @@ class KopsRenderer(object):
         def create_kops_secret_ssh_key():
             # create `kops` secret
             cmd = 'kops create secret sshpublickey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name,
-                state=self.state_store_uri,
-                kops_u=kops_default_admin_name
+                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
             )
             ssh_public_key_path = os.path.join(
                 self.tmp_dir,
@@ -147,16 +121,12 @@ class KopsRenderer(object):
             )
             with open(ssh_public_key_path, 'w') as f:
                 f.write(public_key_material)
-            cmd += ' -i {ssh_public_key_path}'.format(
-                ssh_public_key_path=ssh_public_key_path,
-            )
+            cmd += ' -i {ssh_public_key_path}'.format(ssh_public_key_path=ssh_public_key_path, )
             self.__exec(cmd)
 
         def is_kops_secret_ssh_key_exits():
             cmd = 'kops get secret --type SSHPublicKey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name,
-                state=self.state_store_uri,
-                kops_u=kops_default_admin_name
+                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
             )
             return kops_default_admin_name in (self.__exec(cmd) or '')
 
@@ -177,17 +147,12 @@ class KopsRenderer(object):
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(self.state_store_name)
         try:
-            bucket.create(
-                ACL='private',
-                CreateBucketConfiguration=dict(LocationConstraint=self.region)
-            )
+            bucket.create(ACL='private', CreateBucketConfiguration=dict(LocationConstraint=self.region))
             bucket_versioning = s3.BucketVersioning(self.state_store_name)
             bucket_versioning.enable()
         except ClientError as e:
             if e.response['Error']['Code'] == 'BucketAlreadyOwnedByYou':
-                logger.debug(
-                    'state store <%s> exists, ignore...', self.state_store_name
-                )
+                logger.debug('state store <%s> exists, ignore...', self.state_store_name)
                 return
             raise e
 
@@ -220,8 +185,8 @@ class KopsRenderer(object):
     def __exec(self, cmd):
         cmd_splitted = [i for i in cmd.split(' ') if i]
         logger.info(
-            '__exec: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s',
-            self.env, self.account_name, cmd, cmd_splitted
+            '__exec: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env,
+            self.account_name, cmd, cmd_splitted
         )
         exitcode, data = getstatusoutput(cmd)
         logger.debug('exitcode -> %s, data -> %s', exitcode, data)
@@ -238,16 +203,9 @@ class KopsRenderer(object):
 
     def build(self):
         cmd = 'kops toolbox template --format-yaml=true '
-        cmd += ''.join(
-            [
-                ' --values ' + f
-                for f in [self._build_value_file(), self.current_values_path]
-            ]
-        )
+        cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
         cmd += ''.join([' --template ' + f for f in self.paths_root_templates])
-        snippets_path = os.path.join(
-            self.current_vars_dir, self.env + '-snippets'
-        )
+        snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
         try:
             os.listdir(snippets_path)
             cmd += ' --snippets ' + snippets_path
@@ -268,9 +226,7 @@ class KopsRenderer(object):
 
         current_state = self._get_current_cluster_state()
         if 'No cluster found' in current_state:
-            logger.info(
-                'No existing cluster named `%s` found!', self.cluster_name
-            )
+            logger.info('No existing cluster named `%s` found!', self.cluster_name)
             current_state = ''
         diff_result = unified_diff(
             current_state.splitlines(),
@@ -283,9 +239,7 @@ class KopsRenderer(object):
 
     def apply(self):
         cmd = 'kops replace -f {file} --name={name} --state={state}  --force'.format(
-            file=self.path_template_rendered,
-            name=self.cluster_name,
-            state=self.state_store_uri
+            file=self.path_template_rendered, name=self.cluster_name, state=self.state_store_uri
         )
         self.__exec(cmd)
 
