@@ -1,6 +1,7 @@
 # Kubernetes
 
 <img src="https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png" width="100">
+![build status](https://http://nginx.k8s.domainsecurity.cc/ycliuhw/kforce?status.svg?branch=master)
 
 ----
 
