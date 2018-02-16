@@ -1,0 +1,6 @@
+-r base.txt
+
+# dev deps
+isort
+ipython
+yapf

@@ -1,0 +1,47 @@
+# http://editorconfig.org
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = lf
+charset = utf-8
+
+# Use 2 spaces for the documentation files
+[*.rst]
+indent_size = 3
+
+# Use 2 spaces for the HTML files
+[*.html]
+indent_size = 2
+
+[*.yaml]
+indent_size = 2
+
+[*.yml]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+# The JSON files contain newlines inconsistently
+[*.json]
+indent_size = 2
+insert_final_newline = ignore
+
+# Minified JavaScript files shouldn't be changed
+[**.min.js]
+indent_style = ignore
+insert_final_newline = ignore
+
+# Makefiles always use tabs for indentation
+[Makefile]
+indent_style = tab
+
+# INI files (ie tox config)
+[*.ini]
+indent_style = space
+indent_size = 4

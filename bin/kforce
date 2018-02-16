@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+import fire
+
+if __name__ == '__main__':
+
+    sys.path.insert(0, os.path.join(os.path.abspath('lib'), '..'))
+    from kforce.renderer import KopsRenderer  # noqa
+
+    fire.Fire(KopsRenderer)
