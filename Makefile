@@ -22,12 +22,12 @@ install-deps: ensure_venv
 
 .PHONY: isort
 isort:
-	. $(virtualenv_dir)/bin/activate; isort --recursive --quiet lib/ bin/ tests/  # --check-only
+	isort --recursive --quiet lib/ bin/ tests/  # --check-only
 
 
 .PHONY: yapf
 yapf:
-	. $(virtualenv_dir)/bin/activate; yapf --recursive --in-place lib/ bin/ tests/
+	yapf --recursive --in-place lib/ bin/ tests/
 
 
 .PHONY: pytest
