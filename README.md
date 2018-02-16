@@ -88,7 +88,7 @@ AWS_PROFILE=[kops] make build account_name=[aws-account1] env=[s|p|u|m] vpc_id=v
 ```bash
 AWS_PROFILE=[kops] make diff account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
 ```
-![alt text](img/make-diff.png)
+![make diff](img/make-diff.png)
 
 ### apply kops template to create the cluster
 
