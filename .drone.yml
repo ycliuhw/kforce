@@ -1,6 +1,6 @@
 pipeline:
   build:
-    # image: python:3.6.4
-    dockerfile: Dockerfile
+    image: python:3.6.4-alpine3.7
     commands:
+      - apk --update add alpine-sdk
       - make test
