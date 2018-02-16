@@ -19,3 +19,4 @@ results.xml
 coverage.xml
 .coverage
 htmlcov/
+.pytest_cache/
