@@ -1,0 +1,5 @@
+boto3==1.5.25
+fire==0.1.2
+awscli==1.14.35
+Jinja2==2.10
+PyYAML==3.12
