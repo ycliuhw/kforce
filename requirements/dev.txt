@@ -4,3 +4,10 @@
 isort
 ipython
 yapf
+mypy
+
+# Testing
+pytest
+pytest-coverage
+pytest-spec
+moto
