@@ -1,5 +1,6 @@
 pipeline:
   build:
-    image: python:3.6.4
+    # image: python:3.6.4
+    dockerfile: Dockerfile
     commands:
       - make test
