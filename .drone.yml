@@ -1,5 +1,5 @@
 pipeline:
   build:
-    image: python:3.6.4-alpine3.7
+    image: python:3.6.4
     commands:
       - make test
