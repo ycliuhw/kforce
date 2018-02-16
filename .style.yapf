@@ -1,6 +1,5 @@
 [style]
-exclude = docs,.git
-ignore = E123,E128,E402,E501,W503,E731,W601
+based_on_style=facebook
 column_limit=119
 indent_width=4
 continuation_indent_width=4
