@@ -15,8 +15,8 @@ ensure_venv:
 	test -d venv || virtualenv -p $(python_base_path) $(virtualenv_dir)
 
 
-.PHONY: install
-install: ensure_venv
+.PHONY: install-deps
+install-deps: ensure_venv
 	$(virtualenv_dir)/bin/pip install -r requirements/dev.txt
 
 
@@ -31,11 +31,16 @@ yapf:
 
 
 .PHONY: test
-test: install isort yapf  # pytest
+test: install-deps isort yapf  # pytest
+
+
+PHONY: install
+install:
+	$(virtualenv_dir)/bin/python setup.py install
 
 
 .PHONY: ensure_iam
-ensure_iam: install
+ensure_iam: install-deps
 	# create group
 	. $(virtualenv_dir)/bin/activate; aws iam create-group --group-name $(kops_iam_id)
 	# attach group policies
