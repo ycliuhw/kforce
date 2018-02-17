@@ -35,7 +35,7 @@ pip install kforce
 git clone https://github.com/ycliuhw/kforce.git
 cd kforce
 
-virtualenv -p $(python3.6) venv
+virtualenv -p $(which python3.6) venv
 source venv/bin/activate
 python setup.py install
 ```
