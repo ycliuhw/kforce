@@ -1,0 +1,12 @@
+include README.md COPYING
+include requirements/*
+recursive-include kforce *.py
+recursive-include kforce *.pickle
+recursive-include docs *
+recursive-include licenses *
+recursive-include packaging *
+recursive-include test *
+include Makefile
+include templates
+include MANIFEST.in
+include CHANGELOG.md

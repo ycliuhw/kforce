@@ -20,3 +20,5 @@ coverage.xml
 .coverage
 htmlcov/
 .pytest_cache/
+
+kforce.egg-info
