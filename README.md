@@ -2,19 +2,59 @@
 
 ![build-status](http://nginx.k8s.domainsecurity.cc/api/badges/ycliuhw/kforce/status.svg?branch=master)
 
-----
-
-<img src="https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png" width="100">
+## Create and manage K8S cluster using templates in an automated way ^.^
 
 ----
-
-## Create and manage K8S cluster using templates in an automated way :>
 
 > <https://github.com/kubernetes/kops/blob/master/docs/cluster_spec.md>
 
+### Requirements
+
 ----
 
+* [kops](https://github.com/kubernetes/kops/)
+* python3.6
+
+
+### Usage
+
+----
+
+#### create `kops` iam group, attach related policies, create user then add user to group:
+
+```bash
+AWS_PROFILE=[admin] make ensure_iam
+```
+
+#### create access key for `kops` user
+
+```bash
+AWS_PROFILE=[admin] make create_access_key
+```
+
+#### build kops template
+
+```bash
+AWS_PROFILE=[kops] kforce build account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+```
+
+#### diff kops template
+
+```bash
+AWS_PROFILE=[kops] kforce diff account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+```
+
+![make diff](img/make-diff.png)
+
+#### apply kops template to create the cluster
+
+```bash
+AWS_PROFILE=[kops] kforce apply account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+```
+
 ### directory structure
+
+----
 
 ```text
 ├── Makefile
@@ -29,7 +69,7 @@
 │   └── domainsandbox-s.yaml
 ├── bin
 │   └── kforce
-├── lib
+├── kforce
 │   ├── aws_facts.py
 │   ├── renderer.py
 │   └── utils.py
@@ -65,37 +105,4 @@
     │   └── m.yaml  # `aws-account1-[m]anagement` cluster with standard 3*node IG
     └── aws-account3
         └── s.yaml
-```
-
-----
-
-### create `kops` iam group, attach related policies, create user then add user to group:
-
-```bash
-AWS_PROFILE=[admin] make ensure_iam
-```
-
-### create access key for `kops` user
-
-```bash
-AWS_PROFILE=[admin] make create_access_key
-```
-
-### build kops template
-
-```bash
-AWS_PROFILE=[kops] make build account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
-```
-
-### diff kops template
-
-```bash
-AWS_PROFILE=[kops] make diff account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
-```
-![make diff](img/make-diff.png)
-
-### apply kops template to create the cluster
-
-```bash
-AWS_PROFILE=[kops] make apply account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
 ```

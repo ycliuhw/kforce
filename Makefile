@@ -22,21 +22,26 @@ install-deps: ensure_venv
 
 .PHONY: isort
 isort:
-	isort --recursive --quiet lib/ bin/ tests/  # --check-only
+	isort --recursive --quiet kforce/ bin/ tests/  # --check-only
 
 
 .PHONY: yapf
 yapf:
-	yapf --recursive --in-place lib/ bin/ tests/
+	yapf --recursive --in-place kforce/ bin/ tests/ setup.py conftest.py
 
 
 .PHONY: pytest
 pytest:
-	py.test --spec --cov=lib --cov-report html --cov-report term tests
+	py.test --spec --cov=kforce --cov-report html --cov-report term tests
 
 
 .PHONY: test
 test: isort yapf  pytest
+
+
+.PHONY: test
+pypi-upload:
+	python setup.py sdist upload -r pypi
 
 
 PHONY: install

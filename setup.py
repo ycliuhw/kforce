@@ -1,21 +1,14 @@
 import os
-from setuptools import setup, find_packages
+import sys
+from setuptools import setup
+from pip.req import parse_requirements
+from pip.download import PipSession
 
-VERSION = "0.1.1"
+VERSION = "0.1.17"
 
-ROOT_DIR = os.path.dirname(__file__)
+scripts = ["bin/kforce"]
 
-with open(os.path.join(ROOT_DIR, "requirements", "base.txt"), "r") as f:
-    install_requires = f.read().splitlines()
-    if not install_requires:
-        print(
-            "Unable to read requirements from the requirements.txt file"
-            "That indicates this copy of the source code is incomplete."
-        )
-        sys.exit(2)
-
-with open(os.path.join(ROOT_DIR, "README.md"), "r") as f:
-    long_description = f.read()
+install_requires = [str(ir.req) for ir in parse_requirements("requirements/base.txt", session=PipSession())]
 
 if __name__ == "__main__":
     setup(
@@ -23,11 +16,11 @@ if __name__ == "__main__":
         version=VERSION,
         author="Yang Kelvin Liu",
         author_email="ycliuhw@gmail.com",
-        license="New BSD license",
+        license="Apache License 2.0",
         url="https://github.com/ycliuhw/kforce",
         description="KOPS template automation",
-        long_description=long_description,
-        packages=find_packages(),
-        scripts=["bin/kforce"],
+        packages=["kforce"],
+        scripts=scripts,
+        keywords=["k8s", "kops", "kubernetes", "template"],
         install_requires=install_requires,
     )
