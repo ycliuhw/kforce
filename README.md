@@ -15,6 +15,30 @@
 * [kops](https://github.com/kubernetes/kops/)
 * python3.6
 
+### Installation
+
+----
+
+#### from pypi
+
+----
+
+```bash
+pip install kforce
+```
+
+#### from source
+
+----
+
+```bash
+git clone https://github.com/ycliuhw/kforce.git
+cd kforce
+
+virtualenv -p $(python3.6) venv
+source venv/bin/activate
+python setup.py install
+```
 
 ### Usage
 
