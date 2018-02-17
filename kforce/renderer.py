@@ -79,15 +79,14 @@ class KopsRenderer(object):
             bin_path = shutil.which(bin)
             if bin_path is None or not os.access(bin_path, os.X_OK):
                 raise RuntimeError('`{}` is NOT installed!'.format(bin))
+
+        kops_version = None
+        k8s_version = None
         try:
             # ensure kops and k8s has same major and minor version!
-            kops_version = re.search(
-                'Version\s*([\d.]+)', self.__sh('kops version')
-            ).group(1)
+            kops_version = re.search('Version\s*([\d.]+)', self.__kops_cmd('version')).group(1)
             with open(os.path.join(TEMPLATE_DIR, 'values.yaml.j2')) as f:
-                k8s_version = re.search(
-                    'kubernetesVersion:\s*([\d.]+)', f.read()
-                ).group(1)
+                k8s_version = re.search('kubernetesVersion:\s*([\d.]+)', f.read()).group(1)
             assert kops_version.split('.')[:2] == k8s_version.split('.')[:2]
         except Exception as e:
             e.args += (
@@ -142,9 +141,7 @@ class KopsRenderer(object):
 
         def create_kops_secret_ssh_key():
             # create `kops` secret
-            cmd = 'kops create secret sshpublickey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
-            )
+            cmd = 'create secret sshpublickey {kops_u} '.format(kops_u=kops_default_admin_name)
             ssh_public_key_path = os.path.join(
                 self.tmp_dir,
                 urlsafe_b64encode(ec2_key_pair_key.encode()).decode() + '.pub'
@@ -152,13 +149,11 @@ class KopsRenderer(object):
             with open(ssh_public_key_path, 'w') as f:
                 f.write(public_key_material)
             cmd += ' -i {ssh_public_key_path}'.format(ssh_public_key_path=ssh_public_key_path, )
-            self.__sh(cmd)
+            self.__kops_cmd(cmd)
 
         def is_kops_secret_ssh_key_exits():
-            cmd = 'kops get secret --type SSHPublicKey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
-            )
-            return kops_default_admin_name in (self.__sh(cmd) or '')
+            cmd = 'get secret --type SSHPublicKey {kops_u} '.format(kops_u=kops_default_admin_name)
+            return kops_default_admin_name in (self.__kops_cmd(cmd) or '')
 
         if not is_kops_secret_ssh_key_exits():
             create_kops_secret_ssh_key()
@@ -213,26 +208,33 @@ class KopsRenderer(object):
         raise IOError('`{}` has to be an exisitng file or dir'.format(p))
 
     def __sh(self, cmd):
-        cmd_splitted = [i for i in cmd.split(' ') if i]
+        cmd = cmd if isinstance(cmd, (list, tuple)) else [cmd]
+        cmd = [sub_flag for flag in cmd for sub_flag in flag.split(' ') if sub_flag]
+        cmd_str = ' '.join(cmd)
         logger.info(
-            '__sh: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env,
-            self.account_name, cmd, cmd_splitted
+            '__sh: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env, self.account_name,
+            cmd, cmd_str
         )
-        exitcode, data = getstatusoutput(cmd)
+        exitcode, data = getstatusoutput(cmd_str)
         logger.debug('exitcode -> %s, data -> %s', exitcode, data)
         if exitcode != 0:
             raise RuntimeError(data)
         return data
 
-    def _get_current_cluster_state(self):
-        return self.__sh(
-            'kops get --name={name} --state={state} -o yaml'.format(
-                name=self.cluster_name, state=self.state_store_uri
-            )
+    def __kops_cmd(self, args):
+        args = args if isinstance(args, (list, tuple)) else [args]
+        required_global_flags = ' --name={name} --state={state} '.format(
+            name=self.cluster_name, state=self.state_store_uri
         )
+        args.insert(0, shutil.which('kops'))
+        args.append(required_global_flags)
+        return self.__sh(args)
+
+    def _get_current_cluster_state(self):
+        return self.__kops_cmd('get -o yaml')
 
     def build(self):
-        cmd = 'kops toolbox template --format-yaml=true '
+        cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
         cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
         snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
@@ -241,9 +243,10 @@ class KopsRenderer(object):
             cmd += ' --snippets ' + snippets_path
         except FileNotFoundError:
             ...
-        data = self.__sh(cmd)
+        data = self.__kops_cmd(cmd)
         with open(self.template_rendered_path, 'w') as f:
-            f.write('---{}'.format(data[data.index('\n'):]))
+            f.write('---\n\n')
+            f.write(data[data.index('apiVersion'):])
 
     def diff(self):
         try:
@@ -268,15 +271,11 @@ class KopsRenderer(object):
             sys.stdout.write('\n' + line)
 
     def apply(self):
-        cmd = 'kops replace -f {file} --name={name} --state={state}  --force'.format(
-            file=self.template_rendered_path, name=self.cluster_name, state=self.state_store_uri
-        )
-        self.__sh(cmd)
+        cmd = 'replace -f {file}  --force'.format(file=self.template_rendered_path)
+        self.__kops_cmd(cmd)
 
-        cmd = 'kops update cluster --name={name} --state={state}  --yes'.format(
-            name=self.cluster_name, state=self.state_store_uri
-        )
-        self.__sh(cmd)
+        cmd = 'update cluster  --yes'
+        self.__kops_cmd(cmd)
         logger.info(
             (
                 'Changes may require instances to restart: \n\tkops rolling-update cluster --name {name} --state {state}'

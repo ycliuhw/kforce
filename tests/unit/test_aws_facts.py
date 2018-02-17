@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 
-from lib.aws_facts import get_vpc_facts
+from kforce.aws_facts import get_vpc_facts
 from moto import mock_ec2
 
 
