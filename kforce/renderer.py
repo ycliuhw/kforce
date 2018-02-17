@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import sys
 from base64 import urlsafe_b64encode
@@ -52,15 +53,14 @@ class KopsRenderer(object):
         self.region = region
 
         self.cluster_name = '{}-{}.k8s.local'.format(self.account_name, self.env)
-        self.state_store_name = '%s-k8s-state-store' % self.account_name
-        self.state_store_uri = 's3://' + self.state_store_name
+        self.state_store_name = '%s-k8s-state-store' % self.account_name  # share same bucket for cluster in same account
+        self.state_store_uri = 's3://%s' % self.state_store_name
         self.current_vars_dir = os.path.join(CWD, 'vars', self.account_name)
         self.tmp_dir = os.path.join(CWD, 'tmp')
-        self.path_template_rendered = os.path.join(
-            CWD, '__generated__', '{}-{}.yaml'.format(self.account_name, self.env)
-        )
+        self.template_rendered_file_name = '%s-%s.yaml' % (self.account_name, self.env)
+        self.template_rendered_path = os.path.join(CWD, '__generated__', self.template_rendered_file_name)
         self.current_values_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
-        self.paths_root_templates = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
+        self.root_templates_paths = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
 
         self.__prepare()
 
@@ -69,11 +69,40 @@ class KopsRenderer(object):
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
         logger.debug('vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120))
 
+    def ensure_kops_k8s_version_consistency(self):
+        # ensure bin dependencies
+        BIN_DEPS = (
+            'kops',
+            'kubectl',
+        )
+        for bin in BIN_DEPS:
+            bin_path = shutil.which(bin)
+            if bin_path is None or not os.access(bin_path, os.X_OK):
+                raise RuntimeError('`{}` is NOT installed!'.format(bin))
+
+        kops_version = None
+        k8s_version = None
+        try:
+            # ensure kops and k8s has same major and minor version!
+            kops_version = re.search('Version\s*([\d.]+)', self.__kops_cmd('version')).group(1)
+            with open(os.path.join(TEMPLATE_DIR, 'values.yaml.j2')) as f:
+                k8s_version = re.search('kubernetesVersion:\s*([\d.]+)', f.read()).group(1)
+            assert kops_version.split('.')[:2] == k8s_version.split('.')[:2]
+        except Exception as e:
+            e.args += (
+                (
+                    'kops supports the equivalent Kubernetes `minor` release '
+                    'number. `MAJOR.MINOR.PATCH` - https://github.com/kubernetes/kops'
+                    '\nVersion mismatch: kops -> {kops_v}, k8s -> {k8s_v}'
+                ).format(kops_v=kops_version, k8s_v=k8s_version),
+            )
+            raise e
+
     def __prepare(self):
         # ugly but useful
         os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
 
-        # ugly but it's required
+        # ensure ./tmp is there and empty before run
         try:
             logger.debug('removing %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
@@ -95,7 +124,7 @@ class KopsRenderer(object):
         public_key_name = 'publicKey'
         try:
             with open(self.current_values_path) as f:
-                public_key_material = yaml.load(f.read())[public_key_name]
+                public_key_material = yaml.load(f)[public_key_name]
         except KeyError as e:
             e.args += ('`{}` is a required var, define it in {}'.format(public_key_name, self.current_values_path), )
             raise e
@@ -112,9 +141,7 @@ class KopsRenderer(object):
 
         def create_kops_secret_ssh_key():
             # create `kops` secret
-            cmd = 'kops create secret sshpublickey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
-            )
+            cmd = 'create secret sshpublickey {kops_u} '.format(kops_u=kops_default_admin_name)
             ssh_public_key_path = os.path.join(
                 self.tmp_dir,
                 urlsafe_b64encode(ec2_key_pair_key.encode()).decode() + '.pub'
@@ -122,13 +149,11 @@ class KopsRenderer(object):
             with open(ssh_public_key_path, 'w') as f:
                 f.write(public_key_material)
             cmd += ' -i {ssh_public_key_path}'.format(ssh_public_key_path=ssh_public_key_path, )
-            self.__exec(cmd)
+            self.__kops_cmd(cmd)
 
         def is_kops_secret_ssh_key_exits():
-            cmd = 'kops get secret --type SSHPublicKey {kops_u} --name {name} --state {state}'.format(
-                name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
-            )
-            return kops_default_admin_name in (self.__exec(cmd) or '')
+            cmd = 'get secret --type SSHPublicKey {kops_u} '.format(kops_u=kops_default_admin_name)
+            return kops_default_admin_name in (self.__kops_cmd(cmd) or '')
 
         if not is_kops_secret_ssh_key_exits():
             create_kops_secret_ssh_key()
@@ -158,8 +183,8 @@ class KopsRenderer(object):
 
     def _build_value_file(self):
         with open(os.path.join(TEMPLATE_DIR, 'values.yaml.j2')) as f:
-            template = Template(f.read())
-        template_rendered = template.render(
+            value_template = Template(f.read())
+        template_rendered = value_template.render(
             env=self.env,
             account_name=self.account_name,
             state_store_name=self.state_store_name,
@@ -174,7 +199,7 @@ class KopsRenderer(object):
         for f in (
             os.path.join(TEMPLATE_DIR, 'values.yaml.j2'),
             self.current_values_path,
-        ) + self.paths_root_templates:
+        ) + self.root_templates_paths:
             self._validate_path(f)
 
     def _validate_path(self, p):
@@ -182,46 +207,54 @@ class KopsRenderer(object):
             return True
         raise IOError('`{}` has to be an exisitng file or dir'.format(p))
 
-    def __exec(self, cmd):
-        cmd_splitted = [i for i in cmd.split(' ') if i]
+    def __sh(self, cmd):
+        cmd = cmd if isinstance(cmd, (list, tuple)) else [cmd]
+        cmd = [sub_flag for flag in cmd for sub_flag in flag.split(' ') if sub_flag]
+        cmd_str = ' '.join(cmd)
         logger.info(
-            '__exec: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env,
-            self.account_name, cmd, cmd_splitted
+            '__sh: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env, self.account_name,
+            cmd, cmd_str
         )
-        exitcode, data = getstatusoutput(cmd)
+        exitcode, data = getstatusoutput(cmd_str)
         logger.debug('exitcode -> %s, data -> %s', exitcode, data)
         if exitcode != 0:
             raise RuntimeError(data)
         return data
 
-    def _get_current_cluster_state(self):
-        return self.__exec(
-            'kops get --name={name} --state={state} -o yaml'.format(
-                name=self.cluster_name, state=self.state_store_uri
-            )
+    def __kops_cmd(self, args):
+        args = args if isinstance(args, (list, tuple)) else [args]
+        required_global_flags = ' --name={name} --state={state} '.format(
+            name=self.cluster_name, state=self.state_store_uri
         )
+        args.insert(0, shutil.which('kops'))
+        args.append(required_global_flags)
+        return self.__sh(args)
+
+    def _get_current_cluster_state(self):
+        return self.__kops_cmd('get -o yaml')
 
     def build(self):
-        cmd = 'kops toolbox template --format-yaml=true '
+        cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
-        cmd += ''.join([' --template ' + f for f in self.paths_root_templates])
+        cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
         snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
         try:
             os.listdir(snippets_path)
             cmd += ' --snippets ' + snippets_path
         except FileNotFoundError:
             ...
-        data = self.__exec(cmd)
-        with open(self.path_template_rendered, 'w') as f:
-            f.write('---{}'.format(data[data.index('\n'):]))
+        data = self.__kops_cmd(cmd)
+        with open(self.template_rendered_path, 'w') as f:
+            f.write('---\n\n')
+            f.write(data[data.index('apiVersion'):])
 
     def diff(self):
         try:
-            self._validate_path(self.path_template_rendered)
+            self._validate_path(self.template_rendered_path)
         except IOError:
             raise IOError('Before `diff`, please `make build` first!!!')
 
-        with open(self.path_template_rendered) as f:
+        with open(self.template_rendered_path) as f:
             template_to_render = f.read()
 
         current_state = self._get_current_cluster_state()
@@ -232,21 +265,17 @@ class KopsRenderer(object):
             current_state.splitlines(),
             template_to_render.splitlines(),
             fromfile='current_state',
-            tofile=self.path_template_rendered
+            tofile=self.template_rendered_path
         )
         for line in color_diff(diff_result):
             sys.stdout.write('\n' + line)
 
     def apply(self):
-        cmd = 'kops replace -f {file} --name={name} --state={state}  --force'.format(
-            file=self.path_template_rendered, name=self.cluster_name, state=self.state_store_uri
-        )
-        self.__exec(cmd)
+        cmd = 'replace -f {file}  --force'.format(file=self.template_rendered_path)
+        self.__kops_cmd(cmd)
 
-        cmd = 'kops update cluster --name={name} --state={state}  --yes'.format(
-            name=self.cluster_name, state=self.state_store_uri
-        )
-        self.__exec(cmd)
+        cmd = 'update cluster  --yes'
+        self.__kops_cmd(cmd)
         logger.info(
             (
                 'Changes may require instances to restart: \n\tkops rolling-update cluster --name {name} --state {state}'
