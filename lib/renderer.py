@@ -52,15 +52,14 @@ class KopsRenderer(object):
         self.region = region
 
         self.cluster_name = '{}-{}.k8s.local'.format(self.account_name, self.env)
-        self.state_store_name = '%s-k8s-state-store' % self.account_name
-        self.state_store_uri = 's3://' + self.state_store_name
+        self.state_store_name = '%s-k8s-state-store' % self.account_name  # share same bucket for cluster in same account
+        self.state_store_uri = 's3://%s' % self.state_store_name
         self.current_vars_dir = os.path.join(CWD, 'vars', self.account_name)
         self.tmp_dir = os.path.join(CWD, 'tmp')
-        self.path_template_rendered = os.path.join(
-            CWD, '__generated__', '{}-{}.yaml'.format(self.account_name, self.env)
-        )
+        self.template_rendered_file_name = '%s-%s.yaml' % (self.account_name, self.env)
+        self.template_rendered_path = os.path.join(CWD, '__generated__', self.template_rendered_file_name)
         self.current_values_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
-        self.paths_root_templates = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
+        self.root_templates_paths = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
 
         self.__prepare()
 
@@ -73,7 +72,7 @@ class KopsRenderer(object):
         # ugly but useful
         os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
 
-        # ugly but it's required
+        # ensure ./tmp is there and empty before run
         try:
             logger.debug('removing %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
@@ -95,7 +94,7 @@ class KopsRenderer(object):
         public_key_name = 'publicKey'
         try:
             with open(self.current_values_path) as f:
-                public_key_material = yaml.load(f.read())[public_key_name]
+                public_key_material = yaml.load(f)[public_key_name]
         except KeyError as e:
             e.args += ('`{}` is a required var, define it in {}'.format(public_key_name, self.current_values_path), )
             raise e
@@ -174,7 +173,7 @@ class KopsRenderer(object):
         for f in (
             os.path.join(TEMPLATE_DIR, 'values.yaml.j2'),
             self.current_values_path,
-        ) + self.paths_root_templates:
+        ) + self.root_templates_paths:
             self._validate_path(f)
 
     def _validate_path(self, p):
@@ -204,7 +203,7 @@ class KopsRenderer(object):
     def build(self):
         cmd = 'kops toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
-        cmd += ''.join([' --template ' + f for f in self.paths_root_templates])
+        cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
         snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
         try:
             os.listdir(snippets_path)
@@ -212,16 +211,16 @@ class KopsRenderer(object):
         except FileNotFoundError:
             ...
         data = self.__exec(cmd)
-        with open(self.path_template_rendered, 'w') as f:
+        with open(self.template_rendered_path, 'w') as f:
             f.write('---{}'.format(data[data.index('\n'):]))
 
     def diff(self):
         try:
-            self._validate_path(self.path_template_rendered)
+            self._validate_path(self.template_rendered_path)
         except IOError:
             raise IOError('Before `diff`, please `make build` first!!!')
 
-        with open(self.path_template_rendered) as f:
+        with open(self.template_rendered_path) as f:
             template_to_render = f.read()
 
         current_state = self._get_current_cluster_state()
@@ -232,14 +231,14 @@ class KopsRenderer(object):
             current_state.splitlines(),
             template_to_render.splitlines(),
             fromfile='current_state',
-            tofile=self.path_template_rendered
+            tofile=self.template_rendered_path
         )
         for line in color_diff(diff_result):
             sys.stdout.write('\n' + line)
 
     def apply(self):
         cmd = 'kops replace -f {file} --name={name} --state={state}  --force'.format(
-            file=self.path_template_rendered, name=self.cluster_name, state=self.state_store_uri
+            file=self.template_rendered_path, name=self.cluster_name, state=self.state_store_uri
         )
         self.__exec(cmd)
 
