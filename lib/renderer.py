@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import sys
 from base64 import urlsafe_b64encode
@@ -68,6 +69,36 @@ class KopsRenderer(object):
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
         logger.debug('vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120))
 
+    def ensure_kops_k8s_version_consistency(self):
+        # ensure bin dependencies
+        BIN_DEPS = (
+            'kops',
+            'kubectl',
+        )
+        for bin in BIN_DEPS:
+            bin_path = shutil.which(bin)
+            if bin_path is None or not os.access(bin_path, os.X_OK):
+                raise RuntimeError('`{}` is NOT installed!'.format(bin))
+        try:
+            # ensure kops and k8s has same major and minor version!
+            kops_version = re.search(
+                'Version\s*([\d.]+)', self.__sh('kops version')
+            ).group(1)
+            with open(os.path.join(TEMPLATE_DIR, 'values.yaml.j2')) as f:
+                k8s_version = re.search(
+                    'kubernetesVersion:\s*([\d.]+)', f.read()
+                ).group(1)
+            assert kops_version.split('.')[:2] == k8s_version.split('.')[:2]
+        except Exception as e:
+            e.args += (
+                (
+                    'kops supports the equivalent Kubernetes `minor` release '
+                    'number. `MAJOR.MINOR.PATCH` - https://github.com/kubernetes/kops'
+                    '\nVersion mismatch: kops -> {kops_v}, k8s -> {k8s_v}'
+                ).format(kops_v=kops_version, k8s_v=k8s_version),
+            )
+            raise e
+
     def __prepare(self):
         # ugly but useful
         os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
@@ -121,13 +152,13 @@ class KopsRenderer(object):
             with open(ssh_public_key_path, 'w') as f:
                 f.write(public_key_material)
             cmd += ' -i {ssh_public_key_path}'.format(ssh_public_key_path=ssh_public_key_path, )
-            self.__exec(cmd)
+            self.__sh(cmd)
 
         def is_kops_secret_ssh_key_exits():
             cmd = 'kops get secret --type SSHPublicKey {kops_u} --name {name} --state {state}'.format(
                 name=self.cluster_name, state=self.state_store_uri, kops_u=kops_default_admin_name
             )
-            return kops_default_admin_name in (self.__exec(cmd) or '')
+            return kops_default_admin_name in (self.__sh(cmd) or '')
 
         if not is_kops_secret_ssh_key_exits():
             create_kops_secret_ssh_key()
@@ -157,8 +188,8 @@ class KopsRenderer(object):
 
     def _build_value_file(self):
         with open(os.path.join(TEMPLATE_DIR, 'values.yaml.j2')) as f:
-            template = Template(f.read())
-        template_rendered = template.render(
+            value_template = Template(f.read())
+        template_rendered = value_template.render(
             env=self.env,
             account_name=self.account_name,
             state_store_name=self.state_store_name,
@@ -181,10 +212,10 @@ class KopsRenderer(object):
             return True
         raise IOError('`{}` has to be an exisitng file or dir'.format(p))
 
-    def __exec(self, cmd):
+    def __sh(self, cmd):
         cmd_splitted = [i for i in cmd.split(' ') if i]
         logger.info(
-            '__exec: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env,
+            '__sh: env -> `%s`, account -> `%s`, \n\tcmd -> `%s`, \n\tcmd_splitted -> %s', self.env,
             self.account_name, cmd, cmd_splitted
         )
         exitcode, data = getstatusoutput(cmd)
@@ -194,7 +225,7 @@ class KopsRenderer(object):
         return data
 
     def _get_current_cluster_state(self):
-        return self.__exec(
+        return self.__sh(
             'kops get --name={name} --state={state} -o yaml'.format(
                 name=self.cluster_name, state=self.state_store_uri
             )
@@ -210,7 +241,7 @@ class KopsRenderer(object):
             cmd += ' --snippets ' + snippets_path
         except FileNotFoundError:
             ...
-        data = self.__exec(cmd)
+        data = self.__sh(cmd)
         with open(self.template_rendered_path, 'w') as f:
             f.write('---{}'.format(data[data.index('\n'):]))
 
@@ -240,12 +271,12 @@ class KopsRenderer(object):
         cmd = 'kops replace -f {file} --name={name} --state={state}  --force'.format(
             file=self.template_rendered_path, name=self.cluster_name, state=self.state_store_uri
         )
-        self.__exec(cmd)
+        self.__sh(cmd)
 
         cmd = 'kops update cluster --name={name} --state={state}  --yes'.format(
             name=self.cluster_name, state=self.state_store_uri
         )
-        self.__exec(cmd)
+        self.__sh(cmd)
         logger.info(
             (
                 'Changes may require instances to restart: \n\tkops rolling-update cluster --name {name} --state {state}'
