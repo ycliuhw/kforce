@@ -23,6 +23,7 @@ htmlcov/
 
 kforce.egg-info
 
-templates/  # for user's repo
-vars/  # for user's repo
-__generated__/  # for user's repo
+# for user's repo
+templates/
+vars/
+__generated__/
