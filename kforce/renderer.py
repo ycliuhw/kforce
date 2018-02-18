@@ -234,7 +234,7 @@ class KopsRenderer(object):
             open(path, 'w').close()
 
     def __initialize_templates(self, force):
-        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'raw_templates')
+        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
         to_dir = os.path.join(CWD, 'templates')
         self.__ensure_dir(to_dir, force=force)
         file_list = os.listdir(from_dir)
