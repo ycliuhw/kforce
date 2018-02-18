@@ -1,0 +1,205 @@
+---
+
+apiVersion: kops/v1alpha2
+kind: Cluster
+metadata:
+  name: domainnonprod-s.k8s.local
+spec:
+  additionalPolicies:
+    node: |
+      [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "route53:ChangeResourceRecordSets"
+          ],
+          "Resource": [
+            "arn:aws:route53:::hostedzone/*"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "route53:ListHostedZones",
+            "route53:ListResourceRecordSets"
+          ],
+          "Resource": [
+            "*"
+          ]
+        }
+      ]
+  api:
+    loadBalancer:
+      type: Public
+  authorization:
+    rbac: {}
+  channel: stable
+  cloudLabels:
+    Owner: Linux
+    Team: DevOps
+  cloudProvider: aws
+  configBase: s3://domainnonprod-k8s-state-store/domainnonprod-s.k8s.local
+  etcdClusters:
+  - etcdMembers:
+    - instanceGroup: master-ap-southeast-2a
+      name: a
+    - instanceGroup: master-ap-southeast-2b
+      name: b
+    - instanceGroup: master-ap-southeast-2c
+      name: c
+    name: main
+  - etcdMembers:
+    - instanceGroup: master-ap-southeast-2a
+      name: a
+    - instanceGroup: master-ap-southeast-2b
+      name: b
+    - instanceGroup: master-ap-southeast-2c
+      name: c
+    name: events
+  iam:
+    allowContainerRegistry: true
+    legacy: false
+  kubernetesApiAccess:
+  - 0.0.0.0/0
+  kubernetesVersion: 1.8.8
+  masterInternalName: api.internal.domainnonprod-s.k8s.local
+  masterPublicName: api.domainnonprod-s.k8s.local
+  networkCIDR: 10.134.16.0/20
+  networkID: vpc-e7e63080
+  networking:
+    calico: {}
+  nonMasqueradeCIDR: 100.64.0.0/10
+  sshAccess:
+  - 0.0.0.0/0
+  sshKeyName: domainnonprod-s.k8s.local
+  subnets:
+  - cidr: 10.134.24.0/23
+    egress: nat-0602f81e919691f27
+    id: subnet-7f911a36
+    name: ap-southeast-2a
+    type: Private
+    zone: ap-southeast-2a
+  - cidr: 10.134.26.0/23
+    egress: nat-09bc65a491a152a8c
+    id: subnet-ff4dd398
+    name: ap-southeast-2b
+    type: Private
+    zone: ap-southeast-2b
+  - cidr: 10.134.28.0/23
+    egress: nat-09104efa41e5b9e84
+    id: subnet-f3f111ab
+    name: ap-southeast-2c
+    type: Private
+    zone: ap-southeast-2c
+  - cidr: 10.134.16.0/23
+    id: subnet-799c1730
+    name: utility-ap-southeast-2a
+    type: Utility
+    zone: ap-southeast-2a
+  - cidr: 10.134.18.0/23
+    id: subnet-394fd15e
+    name: utility-ap-southeast-2b
+    type: Utility
+    zone: ap-southeast-2b
+  - cidr: 10.134.20.0/23
+    id: subnet-cbf31393
+    name: utility-ap-southeast-2c
+    type: Utility
+    zone: ap-southeast-2c
+  topology:
+    dns:
+      type: Public
+    masters: private
+    nodes: private
+---
+apiVersion: kops/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: domainnonprod-s.k8s.local
+  name: bastion
+spec:
+  image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+  machineType: t2.micro
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: bastion
+  role: Bastion
+  subnets:
+  - utility-ap-southeast-2a
+  - utility-ap-southeast-2b
+  - utility-ap-southeast-2c
+---
+apiVersion: kops/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: domainnonprod-s.k8s.local
+  name: master-ap-southeast-2a
+spec:
+  image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+  machineType: t2.small
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-ap-southeast-2a
+  role: Master
+  rootVolumeSize: 60
+  subnets:
+  - ap-southeast-2a
+---
+apiVersion: kops/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: domainnonprod-s.k8s.local
+  name: master-ap-southeast-2b
+spec:
+  image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+  machineType: t2.small
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-ap-southeast-2b
+  role: Master
+  rootVolumeSize: 60
+  subnets:
+  - ap-southeast-2b
+---
+apiVersion: kops/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: domainnonprod-s.k8s.local
+  name: master-ap-southeast-2c
+spec:
+  image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+  machineType: t2.small
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-ap-southeast-2c
+  role: Master
+  rootVolumeSize: 60
+  subnets:
+  - ap-southeast-2c
+---
+apiVersion: kops/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: domainnonprod-s.k8s.local
+  name: nodes
+spec:
+  image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+  machineType: t2.large
+  maxSize: 3
+  minSize: 3
+  nodeLabels:
+    kops.k8s.io/instancegroup: nodes
+  role: Node
+  subnets:
+  - ap-southeast-2a
+  - ap-southeast-2b
+  - ap-southeast-2c
