@@ -4,7 +4,7 @@ from setuptools import setup
 from pip.req import parse_requirements
 from pip.download import PipSession
 
-VERSION = "0.1.17"
+VERSION = "0.1.20"
 
 scripts = ["bin/kforce"]
 
@@ -23,4 +23,6 @@ if __name__ == "__main__":
         scripts=scripts,
         keywords=["k8s", "kops", "kubernetes", "template"],
         install_requires=install_requires,
+        # include_package_data=True,
+        package_data={"kforce": ["raw_templates/*"]},
     )
