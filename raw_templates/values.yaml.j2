@@ -1,0 +1,20 @@
+# global default values
+accountName:          ""  # added from `vars/[account_name]/[env].yaml`
+clusterOwner:         Linux
+teamName:             DevOps
+stateStoreBucketName: {{state_store_name}}
+ami:                  kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-01-14
+kubernetesVersion:    1.8.8
+vpcID:                ""
+vpcCIDR:              ""
+awsRegion:            ap-southeast-2
+
+cluster:
+  name: {{account_name}}-{{env}}.k8s.local
+  instanceType:
+    bastion:                  t2.micro
+    master:                   t2.small
+    defaultNodeInstanceGroup: t2.large
+  masterRootVolumeSize:       60
+
+{{vpc_facts}}
