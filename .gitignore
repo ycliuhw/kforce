@@ -22,3 +22,7 @@ htmlcov/
 .pytest_cache/
 
 kforce.egg-info
+
+templates  # for user's repo
+vars  # for user's repo
+__generated__  # for user's repo

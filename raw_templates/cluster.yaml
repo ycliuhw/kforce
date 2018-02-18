@@ -1,0 +1,213 @@
+apiVersion: kops/v1alpha2
+kind:       Cluster
+metadata:
+  name: {{.cluster.name}}
+spec:
+  sshKeyName: {{.cluster.name}}
+  additionalPolicies:
+    node: |
+      [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "route53:ChangeResourceRecordSets"
+          ],
+          "Resource": [
+            "arn:aws:route53:::hostedzone/*"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "route53:ListHostedZones",
+            "route53:ListResourceRecordSets"
+          ],
+          "Resource": [
+            "*"
+          ]
+        }
+      ]
+  api:
+    loadBalancer:
+      type: Public
+  authorization:
+    rbac: {}
+  channel: stable
+  cloudLabels:
+    Team: {{.teamName}}
+    Owner: {{.clusterOwner}}
+  cloudProvider: aws
+  configBase: s3://{{.stateStoreBucketName}}/{{.cluster.name}}
+  etcdClusters:
+  - etcdMembers:
+    - instanceGroup: master-{{.awsRegion}}a
+      name: a
+    - instanceGroup: master-{{.awsRegion}}b
+      name: b
+    - instanceGroup: master-{{.awsRegion}}c
+      name: c
+    name: main
+  - etcdMembers:
+    - instanceGroup: master-{{.awsRegion}}a
+      name: a
+    - instanceGroup: master-{{.awsRegion}}b
+      name: b
+    - instanceGroup: master-{{.awsRegion}}c
+      name: c
+    name: events
+  iam:
+    legacy:                 false
+    allowContainerRegistry: true
+  kubernetesApiAccess:
+  - 0.0.0.0/0
+  kubernetesVersion:  {{.kubernetesVersion}}
+  masterInternalName: api.internal.{{.cluster.name}}
+  masterPublicName:   api.{{.cluster.name}}
+  networkID:          {{.vpc.id}}
+  networkCIDR:        {{.vpc.cidr}}
+  nonMasqueradeCIDR:  100.64.0.0/10
+  networking:
+    calico: {}
+  sshAccess:
+  - 0.0.0.0/0
+  subnets:
+  - cidr:   {{.vpc.a.private.cidr}}
+    id:     {{.vpc.a.private.id}}
+    name:   {{.awsRegion}}a
+    type:   Private
+    egress: {{.vpc.a.private.nat_id}}
+    zone:   {{.awsRegion}}a
+  - cidr:   {{.vpc.b.private.cidr}}
+    id:     {{.vpc.b.private.id}}
+    name:   {{.awsRegion}}b
+    type:   Private
+    egress: {{.vpc.b.private.nat_id}}
+    zone:   {{.awsRegion}}b
+  - cidr:   {{.vpc.c.private.cidr}}
+    id:     {{.vpc.c.private.id}}
+    name:   {{.awsRegion}}c
+    type:   Private
+    egress: {{.vpc.c.private.nat_id}}
+    zone:   {{.awsRegion}}c
+  - cidr:   {{.vpc.a.public.cidr}}
+    id:     {{.vpc.a.public.id}}
+    name:   utility-{{.awsRegion}}a
+    type:   Utility
+    zone:   {{.awsRegion}}a
+  - cidr:   {{.vpc.b.public.cidr}}
+    id:     {{.vpc.b.public.id}}
+    name:   utility-{{.awsRegion}}b
+    type:   Utility
+    zone:   {{.awsRegion}}b
+  - cidr:   {{.vpc.c.public.cidr}}
+    id:     {{.vpc.c.public.id}}
+    name:   utility-{{.awsRegion}}c
+    type:   Utility
+    zone:   {{.awsRegion}}c
+  topology:
+    dns:
+      type: Public
+    masters: private
+    nodes:   private
+
+---
+
+apiVersion: kops/v1alpha2
+kind:       InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{.cluster.name}}
+  name: bastion
+spec:
+  nodeLabels:
+    kops.k8s.io/instancegroup: bastion
+  maxSize:     1
+  minSize:     1
+  role:        Bastion
+  image:       {{.ami}}
+  machineType: {{.cluster.instanceType.bastion}}
+  subnets:
+  - utility-{{.awsRegion}}a
+  - utility-{{.awsRegion}}b
+  - utility-{{.awsRegion}}c
+
+---
+
+apiVersion: kops/v1alpha2
+kind:       InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{.cluster.name}}
+  name: master-{{.awsRegion}}a
+spec:
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-{{.awsRegion}}a
+  maxSize:        1
+  minSize:        1
+  role:           Master
+  image:          {{.ami}}
+  machineType:    {{.cluster.instanceType.master}}
+  rootVolumeSize: {{.cluster.masterRootVolumeSize}}
+  subnets:
+  - {{.awsRegion}}a
+
+---
+
+apiVersion: kops/v1alpha2
+kind:       InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{.cluster.name}}
+  name: master-{{.awsRegion}}b
+spec:
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-{{.awsRegion}}b
+  maxSize:        1
+  minSize:        1
+  role:           Master
+  image:          {{.ami}}
+  machineType:    {{.cluster.instanceType.master}}
+  rootVolumeSize: {{.cluster.masterRootVolumeSize}}
+  subnets:
+  - {{.awsRegion}}b
+
+---
+
+apiVersion: kops/v1alpha2
+kind:       InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{.cluster.name}}
+  name: master-{{.awsRegion}}c
+spec:
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-{{.awsRegion}}c
+  maxSize:        1
+  minSize:        1
+  role:           Master
+  image:          {{.ami}}
+  machineType:    {{.cluster.instanceType.master}}
+  rootVolumeSize: {{.cluster.masterRootVolumeSize}}
+  subnets:
+  - {{.awsRegion}}c
+
+---
+
+apiVersion: kops/v1alpha2
+kind:       InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{.cluster.name}}
+  name: nodes
+spec:
+  nodeLabels:
+    kops.k8s.io/instancegroup: nodes
+  maxSize:     3
+  minSize:     3
+  role:        Node
+  image:       {{.ami}}
+  machineType: {{.cluster.instanceType.defaultNodeInstanceGroup}}
+  subnets:
+  - {{.awsRegion}}a
+  - {{.awsRegion}}b
+  - {{.awsRegion}}c

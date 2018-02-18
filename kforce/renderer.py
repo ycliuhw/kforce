@@ -36,13 +36,10 @@ class KopsRenderer(object):
 
     vpc_facts = None
 
-    def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False, *args, **kwargs):
+    def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False):
         if debug is True:
             logger.setLevel(logging.DEBUG)
             logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.DEBUG)
-
-        logger.info('args -> %s', args)
-        logger.info('kwargs -> %s', kwargs)
 
         if not (env and account_name and vpc_id):
             raise ValueError(
@@ -65,17 +62,14 @@ class KopsRenderer(object):
         self.current_values_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
         self.root_templates_paths = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
 
-        self.__prepare(*args, **kwargs)
+        self.__prepare()
 
-    def ensure_aws_facts(self, *args, **kwargs):
-        if 'build' not in args:
-            # do not do this for `build`
-            return
+    def ensure_aws_facts(self):
 
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
         logger.debug('vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120))
 
-    def ensure_kops_k8s_version_consistency(self, *args, **kwargs):
+    def ensure_kops_k8s_version_consistency(self):
         # ensure bin dependencies
         BIN_DEPS = (
             'kops',
@@ -104,7 +98,7 @@ class KopsRenderer(object):
             )
             raise e
 
-    def __prepare(self, *args, **kwargs):
+    def __prepare(self):
         # ugly but useful
         os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
 
@@ -117,18 +111,15 @@ class KopsRenderer(object):
         finally:
             os.makedirs(self.tmp_dir)
 
-        for i in dir(self):
-            if not i.startswith('ensure'):
-                continue
-            f = getattr(self, i)
-            if callable(f):
-                logger.info('doing -> %s', i)
-                f(*args, **kwargs)
+        # for i in dir(self):
+        #     if not i.startswith('ensure'):
+        #         continue
+        #     f = getattr(self, i)
+        #     if callable(f):
+        #         logger.info('doing -> %s', i)
+        #         f()
 
-    def ensure_ssh_pair(self, *args, **kwargs):
-        if 'apply' not in args:
-            # only do this for `apply`
-            return
+    def ensure_ssh_pair(self):
 
         # ensure aws ec2 key pair
         public_key_name = 'publicKey'
@@ -168,7 +159,7 @@ class KopsRenderer(object):
         if not is_kops_secret_ssh_key_exits():
             create_kops_secret_ssh_key()
 
-    def ensure_bin_dependencies(self, *args, **kwargs):
+    def ensure_bin_dependencies(self):
         BIN_DEPS = (
             'kops',
             'kubectl',
@@ -178,10 +169,7 @@ class KopsRenderer(object):
             if bin_path is None or not os.access(bin_path, os.X_OK):
                 raise RuntimeError('`{}` is NOT installed!'.format(bin))
 
-    def ensure_state_store(self, *args, **kwargs):
-        if 'build' in args:
-            # do not do this for `build`
-            return
+    def ensure_state_store(self):
 
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(self.state_store_name)
@@ -209,7 +197,8 @@ class KopsRenderer(object):
             f.write(template_rendered)
         return built_value_file_path
 
-    def ensure_dir_and_files(self, *args, **kwargs):
+    def ensure_dir_and_files(self):
+
         for f in (
             os.path.join(TEMPLATE_DIR, 'values.yaml.j2'),
             self.current_values_path,
@@ -220,6 +209,61 @@ class KopsRenderer(object):
         if os.path.isdir(p) or os.path.isfile(p):
             return True
         raise IOError('`{}` has to be an exisitng file or dir'.format(p))
+
+    def __ensure_dir(self, path, force=False):
+        if force is True:
+            try:
+                shutil.rmtree(path)
+            except FileNotFoundError:
+                ...
+
+        try:
+            os.listdir(path)
+        except FileNotFoundError:
+            os.makedirs(path)
+
+    def __ensure_file(self, path, force=False):
+        if force is True:
+            try:
+                shutil.rmtree(path)
+            except FileNotFoundError:
+                ...
+        if not os.path.isfile(path):
+            open(path, 'w').close()
+
+    def __initialize_templates(self, force):
+        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'raw_templates')
+        to_dir = os.path.join(CWD, 'templates')
+        self.__ensure_dir(to_dir, force=force)
+        file_list = os.listdir(from_dir)
+        if force is False:
+            try:
+                existing_files = os.listdir(to_dir)
+                for f in file_list:
+                    assert f in existing_files
+                logger.info(
+                    'initialize skipped coz all template are there, to reset all templates, run this cmd with `force=True`'
+                )
+                return
+            except AssertionError:
+                ...
+
+        # ensure template
+        logger.info('copying templates ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
+        shutil.rmtree(to_dir)
+        shutil.copytree(from_dir, to_dir)
+
+    def __initialize_vars(self, force):
+        # ensure vars dir
+        var_dir = os.path.join(CWD, 'vars', self.account_name)
+        self.__ensure_dir(var_dir, force=force)
+        self.__ensure_dir(os.path.join(var_dir, '%s-addons' % self.env), force=force)
+        self.__ensure_dir(os.path.join(var_dir, '%s-snippets' % self.env), force=force)
+        self.__ensure_file(os.path.join(var_dir, '%s.yaml' % self.env), force=force)
+
+    def initialize(self, force=False):
+        self.__initialize_templates(force=force)
+        self.__initialize_vars(force=force)
 
     def __sh(self, cmd):
         cmd = cmd if isinstance(cmd, (list, tuple)) else [cmd]
