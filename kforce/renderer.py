@@ -64,6 +64,9 @@ class KopsRenderer(object):
 
         self.__prepare()
 
+        self.ensure_kops_k8s_version_consistency()
+        self.ensure_bin_dependencies()
+
     def ensure_aws_facts(self):
 
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
@@ -261,10 +264,6 @@ class KopsRenderer(object):
         self.__ensure_dir(os.path.join(var_dir, '%s-snippets' % self.env), force=force)
         self.__ensure_file(os.path.join(var_dir, '%s.yaml' % self.env), force=force)
 
-    def initialize(self, force=False):
-        self.__initialize_templates(force=force)
-        self.__initialize_vars(force=force)
-
     def __sh(self, cmd):
         cmd = cmd if isinstance(cmd, (list, tuple)) else [cmd]
         cmd = [sub_flag for flag in cmd for sub_flag in flag.split(' ') if sub_flag]
@@ -291,7 +290,15 @@ class KopsRenderer(object):
     def _get_current_cluster_state(self):
         return self.__kops_cmd('get -o yaml')
 
+    def initialize(self, force=False):
+        self.__initialize_templates(force=force)
+        self.__initialize_vars(force=force)
+        self.__ensure_dir(os.path.join(CWD, '__generated__'), force=force)
+
     def build(self):
+        self.ensure_aws_facts()
+        self.ensure_dir_and_files()
+
         cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
         cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
@@ -329,6 +336,9 @@ class KopsRenderer(object):
             sys.stdout.write('\n' + line)
 
     def apply(self):
+        self.ensure_ssh_pair()
+        self.ensure_state_store()
+
         cmd = 'replace -f {file}  --force'.format(file=self.template_rendered_path)
         self.__kops_cmd(cmd)
 
