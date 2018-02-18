@@ -64,6 +64,8 @@ class KopsRenderer(object):
 
         self.__prepare()
 
+        self.ensure_bin_dependencies()
+
     def ensure_aws_facts(self):
 
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
@@ -111,15 +113,16 @@ class KopsRenderer(object):
         finally:
             os.makedirs(self.tmp_dir)
 
-        for i in dir(self):
-            if not i.startswith('ensure'):
-                continue
-            f = getattr(self, i)
-            if callable(f):
-                logger.info('doing -> %s', i)
-                f()
+        # for i in dir(self):
+        #     if not i.startswith('ensure'):
+        #         continue
+        #     f = getattr(self, i)
+        #     if callable(f):
+        #         logger.info('doing -> %s', i)
+        #         f()
 
     def ensure_ssh_pair(self):
+
         # ensure aws ec2 key pair
         public_key_name = 'publicKey'
         try:
@@ -169,6 +172,7 @@ class KopsRenderer(object):
                 raise RuntimeError('`{}` is NOT installed!'.format(bin))
 
     def ensure_state_store(self):
+
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(self.state_store_name)
         try:
@@ -196,6 +200,7 @@ class KopsRenderer(object):
         return built_value_file_path
 
     def ensure_dir_and_files(self):
+
         for f in (
             os.path.join(TEMPLATE_DIR, 'values.yaml.j2'),
             self.current_values_path,
@@ -206,6 +211,57 @@ class KopsRenderer(object):
         if os.path.isdir(p) or os.path.isfile(p):
             return True
         raise IOError('`{}` has to be an exisitng file or dir'.format(p))
+
+    def __ensure_dir(self, path, force=False):
+        if force is True:
+            try:
+                shutil.rmtree(path)
+            except FileNotFoundError:
+                ...
+
+        try:
+            os.listdir(path)
+        except FileNotFoundError:
+            os.makedirs(path)
+
+    def __ensure_file(self, path, force=False):
+        if force is True:
+            try:
+                shutil.rmtree(path)
+            except FileNotFoundError:
+                ...
+        if not os.path.isfile(path):
+            open(path, 'w').close()
+
+    def __initialize_templates(self, force):
+        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'raw_templates')
+        to_dir = os.path.join(CWD, 'templates')
+        self.__ensure_dir(to_dir, force=force)
+        file_list = os.listdir(from_dir)
+        if force is False:
+            try:
+                existing_files = os.listdir(to_dir)
+                for f in file_list:
+                    assert f in existing_files
+                logger.info(
+                    'initialize skipped coz all template are there, to reset all templates, run this cmd with `force=True`'
+                )
+                return
+            except AssertionError:
+                ...
+
+        # ensure template
+        logger.info('copying templates ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
+        shutil.rmtree(to_dir)
+        shutil.copytree(from_dir, to_dir)
+
+    def __initialize_vars(self, force):
+        # ensure vars dir
+        var_dir = os.path.join(CWD, 'vars', self.account_name)
+        self.__ensure_dir(var_dir, force=force)
+        self.__ensure_dir(os.path.join(var_dir, '%s-addons' % self.env), force=force)
+        self.__ensure_dir(os.path.join(var_dir, '%s-snippets' % self.env), force=force)
+        self.__ensure_file(os.path.join(var_dir, '%s.yaml' % self.env), force=force)
 
     def __sh(self, cmd):
         cmd = cmd if isinstance(cmd, (list, tuple)) else [cmd]
@@ -233,7 +289,16 @@ class KopsRenderer(object):
     def _get_current_cluster_state(self):
         return self.__kops_cmd('get -o yaml')
 
+    def initialize(self, force=False):
+        self.__initialize_templates(force=force)
+        self.__initialize_vars(force=force)
+        self.__ensure_dir(os.path.join(CWD, '__generated__'), force=force)
+
     def build(self):
+        self.ensure_aws_facts()
+        self.ensure_dir_and_files()
+        self.ensure_kops_k8s_version_consistency()
+
         cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
         cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
@@ -271,6 +336,9 @@ class KopsRenderer(object):
             sys.stdout.write('\n' + line)
 
     def apply(self):
+        self.ensure_ssh_pair()
+        self.ensure_state_store()
+
         cmd = 'replace -f {file}  --force'.format(file=self.template_rendered_path)
         self.__kops_cmd(cmd)
 

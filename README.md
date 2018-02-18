@@ -56,16 +56,22 @@ AWS_PROFILE=[admin] make ensure_iam
 AWS_PROFILE=[admin] make create_access_key
 ```
 
+#### initialize templates dirs for a new cluster
+
+```bash
+AWS_PROFILE=[kops] kforce initialize --account-name=[aws-account1] --env=[s|p|u|m] --vpc-id=vpc-xxxx [--force=True]
+```
+
 #### build kops template
 
 ```bash
-AWS_PROFILE=[kops] kforce build account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+AWS_PROFILE=[kops] kforce build --account-name=[aws-account1] --env=[s|p|u|m] --vpc-id=vpc-xxxx
 ```
 
 #### diff kops template
 
 ```bash
-AWS_PROFILE=[kops] kforce diff account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+AWS_PROFILE=[kops] kforce diff --account-name=[aws-account1] --env=[s|p|u|m] --vpc-id=vpc-xxxx
 ```
 
 ![make diff](img/make-diff.png)
@@ -73,7 +79,7 @@ AWS_PROFILE=[kops] kforce diff account_name=[aws-account1] env=[s|p|u|m] vpc_id=
 #### apply kops template to create the cluster
 
 ```bash
-AWS_PROFILE=[kops] kforce apply account_name=[aws-account1] env=[s|p|u|m] vpc_id=vpc-xxxx
+AWS_PROFILE=[kops] kforce apply --account-name=[aws-account1] --env=[s|p|u|m] --vpc-id=vpc-xxxx
 ```
 
 ### directory structure
