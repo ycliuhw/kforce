@@ -64,7 +64,6 @@ class KopsRenderer(object):
 
         self.__prepare()
 
-        self.ensure_kops_k8s_version_consistency()
         self.ensure_bin_dependencies()
 
     def ensure_aws_facts(self):
@@ -298,6 +297,7 @@ class KopsRenderer(object):
     def build(self):
         self.ensure_aws_facts()
         self.ensure_dir_and_files()
+        self.ensure_kops_k8s_version_consistency()
 
         cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_values_path]])
