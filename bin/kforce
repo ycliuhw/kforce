@@ -6,8 +6,8 @@ import sys
 import fire
 
 if __name__ == '__main__':
-
-    # sys.path.insert(0, os.path.abspath('lib')))
+    if os.environ.get('MODE') == 'dev':
+        sys.path.insert(0, os.path.join(os.path.abspath('kforce'), '..'))
     from kforce.renderer import KopsRenderer  # noqa
 
     fire.Fire(KopsRenderer)

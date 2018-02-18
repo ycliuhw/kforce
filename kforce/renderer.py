@@ -36,10 +36,13 @@ class KopsRenderer(object):
 
     vpc_facts = None
 
-    def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False):
+    def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False, *args, **kwargs):
         if debug is True:
             logger.setLevel(logging.DEBUG)
             logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.DEBUG)
+
+        logger.info('args -> %s', args)
+        logger.info('kwargs -> %s', kwargs)
 
         if not (env and account_name and vpc_id):
             raise ValueError(
@@ -62,14 +65,17 @@ class KopsRenderer(object):
         self.current_values_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
         self.root_templates_paths = (os.path.join(TEMPLATE_DIR, 'cluster.yaml'), )
 
-        self.__prepare()
+        self.__prepare(*args, **kwargs)
 
-    def ensure_aws_facts(self):
+    def ensure_aws_facts(self, *args, **kwargs):
+        if 'build' not in args:
+            # do not do this for `build`
+            return
 
         self.vpc_facts = get_vpc_facts(vpc_id=self.vpc_id)
         logger.debug('vpc_facts -> \n%s', pformat(self.vpc_facts, indent=4, width=120))
 
-    def ensure_kops_k8s_version_consistency(self):
+    def ensure_kops_k8s_version_consistency(self, *args, **kwargs):
         # ensure bin dependencies
         BIN_DEPS = (
             'kops',
@@ -98,7 +104,7 @@ class KopsRenderer(object):
             )
             raise e
 
-    def __prepare(self):
+    def __prepare(self, *args, **kwargs):
         # ugly but useful
         os.environ['AWS_DEFAULT_REGION'] = os.environ.get('AWS_DEFAULT_REGION', None) or self.region
 
@@ -117,9 +123,13 @@ class KopsRenderer(object):
             f = getattr(self, i)
             if callable(f):
                 logger.info('doing -> %s', i)
-                f()
+                f(*args, **kwargs)
 
-    def ensure_ssh_pair(self):
+    def ensure_ssh_pair(self, *args, **kwargs):
+        if 'apply' not in args:
+            # only do this for `apply`
+            return
+
         # ensure aws ec2 key pair
         public_key_name = 'publicKey'
         try:
@@ -158,7 +168,7 @@ class KopsRenderer(object):
         if not is_kops_secret_ssh_key_exits():
             create_kops_secret_ssh_key()
 
-    def ensure_bin_dependencies(self):
+    def ensure_bin_dependencies(self, *args, **kwargs):
         BIN_DEPS = (
             'kops',
             'kubectl',
@@ -168,7 +178,11 @@ class KopsRenderer(object):
             if bin_path is None or not os.access(bin_path, os.X_OK):
                 raise RuntimeError('`{}` is NOT installed!'.format(bin))
 
-    def ensure_state_store(self):
+    def ensure_state_store(self, *args, **kwargs):
+        if 'build' in args:
+            # do not do this for `build`
+            return
+
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(self.state_store_name)
         try:
@@ -195,7 +209,7 @@ class KopsRenderer(object):
             f.write(template_rendered)
         return built_value_file_path
 
-    def ensure_dir_and_files(self):
+    def ensure_dir_and_files(self, *args, **kwargs):
         for f in (
             os.path.join(TEMPLATE_DIR, 'values.yaml.j2'),
             self.current_values_path,
