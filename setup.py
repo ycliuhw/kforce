@@ -4,7 +4,7 @@ from setuptools import setup
 from pip.req import parse_requirements
 from pip.download import PipSession
 
-VERSION = "0.1.20"
+VERSION = "0.1.21"
 
 scripts = ["bin/kforce"]
 
