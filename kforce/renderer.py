@@ -296,7 +296,8 @@ class KopsRenderer(object):
 
         # ensure current context correct
         use_context_args = [kubectl, 'config', 'use-context', self.cluster_name]
-        logger.debug(self.__sh(use_context_args))
+        logger.debug('doing -> %s', ' '.join(use_context_args))
+        self.__sh(use_context_args)
 
         if args[0] is not kubectl:
             args.insert(0, kubectl)
