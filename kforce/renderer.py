@@ -23,6 +23,7 @@ logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.CRITICAL)  # boto logging i
 
 CWD = os.getcwd()
 TEMPLATE_DIR = os.path.join(CWD, 'templates')
+ADDON_DIR = os.path.join(TEMPLATE_DIR, 'addons')
 
 ENVS = (
     's',  # stage
@@ -255,6 +256,9 @@ class KopsRenderer(object):
         shutil.rmtree(to_dir)
         shutil.copytree(from_dir, to_dir)
 
+        # ensure addon dir
+        self.__ensure_dir(ADDON_DIR, force=force)
+
     def __initialize_vars(self, force):
         # ensure vars dir
         var_dir = os.path.join(CWD, 'vars', self.account_name)
@@ -284,6 +288,19 @@ class KopsRenderer(object):
         )
         args.insert(0, shutil.which('kops'))
         args.append(required_global_flags)
+        return self.__sh(args)
+
+    def __kubectl_cmd(self, args):
+        args = args if isinstance(args, (list, tuple)) else [args]
+        kubectl = shutil.which('kubectl')
+
+        # ensure current context correct
+        use_context_args = [kubectl, 'config', 'use-context', self.cluster_name]
+        logger.debug('doing -> %s', ' '.join(use_context_args))
+        self.__sh(use_context_args)
+
+        if args[0] is not kubectl:
+            args.insert(0, kubectl)
         return self.__sh(args)
 
     def _get_current_cluster_state(self):
@@ -339,7 +356,7 @@ class KopsRenderer(object):
         self.ensure_ssh_pair()
         self.ensure_state_store()
 
-        cmd = 'replace -f {file}  --force'.format(file=self.template_rendered_path)
+        cmd = 'replace -f %s  --force' % self.template_rendered_path
         self.__kops_cmd(cmd)
 
         cmd = 'update cluster  --yes'
@@ -350,3 +367,10 @@ class KopsRenderer(object):
                 '\nCheck cluster status:\n\tkops validate cluster --name {name} --state {state}'
             ).format(name=self.cluster_name, state=self.state_store_uri)
         )
+
+    def install_addons(self):
+        for addon in os.listdir(ADDON_DIR):
+            addon_path = os.path.join(ADD_DIR, addon)
+            cmd = 'apply -f %s' % addon_path
+            logger.info('doing -> %s', cmd)
+            logger.info(self.__kubectl_cmd(cmd))

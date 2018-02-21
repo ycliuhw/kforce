@@ -85,3 +85,8 @@ diff:
 .PHONY: apply
 apply:
 	. $(virtualenv_dir)/bin/activate; ./bin/kforce apply --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
+
+
+.PHONY: install_addons
+install_addons:
+	. $(virtualenv_dir)/bin/activate; ./bin/kforce install_addons --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
