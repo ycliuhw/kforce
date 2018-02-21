@@ -8,5 +8,5 @@
     "--style",
     "${workspaceRoot}/.style.yapf",
   ],
-  "restructuredtext.workspaceRoot": "/Users/kelvin.liu/Code/OSS/kforce"
+  "restructuredtext.workspaceRoot": "${workspaceRoot}/"
 }
