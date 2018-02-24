@@ -1,6 +1,8 @@
 # Kubernetes
 
 ![build-status](http://nginx.k8s.domainsecurity.cc/api/badges/ycliuhw/kforce/status.svg?branch=master)
+[![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
+
 
 ## Create and manage K8S cluster using templates in an automated way ^.^
 
