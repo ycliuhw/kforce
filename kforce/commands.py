@@ -91,7 +91,7 @@ class Command(object):
         self.cluster_template_path = os.path.join(self.DIR_TEMPLATE, 'cluster.yaml')
 
     def _run(self, *args, **kwargs):
-        self.pre_run()
+        self.__pre_run()
         self.run(*args, **kwargs)
 
     def run(self):
@@ -101,14 +101,14 @@ class Command(object):
     def get_name(cls):
         return cls.__name__.lower()
 
-    def pre_run(self):
+    def __pre_run(self):
         for i in dir(self):
             if not i.startswith('ensure'):
                 continue
             f = getattr(self, i)
             if callable(f):
                 logger.debug(
-                    'pre_run -> `%s.%s` for command -> `%s`', self.__class__.__name__, f.__name__, self.get_name()
+                    '__pre_run -> `%s.%s` for command -> `%s`', self.__class__.__name__, f.__name__, self.get_name()
                 )
                 f()
 
@@ -239,7 +239,7 @@ class Build(Command):
         logger.info('%s.run...', self.get_name())
 
         cmd = 'toolbox template --format-yaml=true '
-        cmd += ''.join([' --values ' + f for f in [self._build_value_file(), self.current_value_file_path]])
+        cmd += ''.join([' --values ' + f for f in [self.__build_value_file(), self.current_value_file_path]])
         # cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
         cmd += ' --template %s' % self.cluster_template_path
         snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
@@ -253,7 +253,7 @@ class Build(Command):
             f.write('---\n\n')
             f.write(data[data.index('apiVersion'):])
 
-    def _build_value_file(self):
+    def __build_value_file(self):
         with open(os.path.join(self.DIR_TEMPLATE, 'values.yaml.j2')) as f:
             value_template = Template(f.read())
         template_rendered = value_template.render(
@@ -288,7 +288,7 @@ class Diff(Command):
         with open(self.template_rendered_path) as f:
             template_to_render = f.read()
 
-        current_state = self._get_current_cluster_state()
+        current_state = self.__get_current_cluster_state()
         if 'No cluster found' in current_state:
             logger.info('No existing cluster named `%s` found!', self.cluster_name)
             current_state = ''
@@ -301,7 +301,7 @@ class Diff(Command):
         for line in color_diff(diff_result):
             sys.stdout.write('\n' + line)
 
-    def _get_current_cluster_state(self):
+    def __get_current_cluster_state(self):
         return self._kops_cmd('get -o yaml')
 
 
