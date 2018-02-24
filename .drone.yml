@@ -5,5 +5,5 @@ pipeline:
     commands:
       - apk --update add build-base libffi-dev openssl-dev linux-headers
       - pip install -U pip setuptools virtualenv  # workaround
-      - pip install -r requirements/dev.txt
+      - make install-deps
       - make test
