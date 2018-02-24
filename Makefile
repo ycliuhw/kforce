@@ -22,21 +22,21 @@ install-deps: ensure_venv
 
 .PHONY: isort
 isort:
-	isort --recursive --quiet kforce/ bin/ tests/  # --check-only
+	. $(virtualenv_dir)/bin/activate; isort --recursive --quiet kforce/ bin/ tests/  # --check-only
 
 
 .PHONY: yapf
 yapf:
-	yapf --recursive --in-place kforce/ bin/ tests/ setup.py conftest.py
+	. $(virtualenv_dir)/bin/activate; yapf --recursive --in-place kforce/ bin/ tests/ setup.py conftest.py
 
 
 .PHONY: pytest
 pytest:
-	py.test --spec --cov=kforce --cov-report html --cov-report term tests
+	. $(virtualenv_dir)/bin/activate; py.test --spec --cov=kforce --cov-report html --cov-report term tests
 
 
 .PHONY: test
-test: isort yapf  pytest
+test: isort yapf pytest
 
 
 .PHONY: test
