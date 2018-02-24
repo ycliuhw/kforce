@@ -72,6 +72,10 @@ create_access_key:
 	. $(virtualenv_dir)/bin/activate; aws iam create-access-key --user-name $(kops_iam_id)
 
 
+.PHONY: new  # initialize config for a new cluster (force=[True|False] - overwrite existing files or not)
+new:
+	. $(virtualenv_dir)/bin/activate; ./bin/kforce new --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug) $(force)
+
 .PHONY: build
 build:
 	. $(virtualenv_dir)/bin/activate; ./bin/kforce build --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
