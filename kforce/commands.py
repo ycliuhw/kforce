@@ -3,14 +3,10 @@ import os
 import re
 import shutil
 import sys
-from base64 import urlsafe_b64encode
 from difflib import unified_diff
-from pprint import pformat
 from subprocess import getstatusoutput
 
-import boto3
 import yaml
-from botocore.errorfactory import ClientError
 from jinja2 import Template
 
 from . import init_logger
