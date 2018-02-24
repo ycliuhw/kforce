@@ -47,15 +47,20 @@ class Command(object):
     DIR_TMP = os.path.join(DIR_ROOT, 'tmp')
 
     @property
-    def required_path(self):
-        return (self.DIR_TEMPLATE, self.DIR_ADDON, self.current_value_file_path, self.cluster_template_path)
+    def required_paths(self):
+        return (
+            self.DIR_TEMPLATE,
+            self.DIR_ADDON,
+            self.current_value_file_path,
+            self.cluster_template_path,
+        )
 
     ensure_region = ensure_region
     ensure_kops_k8s_version_consistency = ensure_kops_k8s_version_consistency
     ensure_tmp_dir_existing_and_empty = ensure_tmp_dir_existing_and_empty
 
     def ensure_dir_and_files(self):
-        for p in self.required_path:
+        for p in self.required_paths:
             self._validate_path(p)
             logger.debug('OK, -> %s', p)
 
@@ -173,8 +178,12 @@ class Command(object):
 class New(Command):
 
     @property
-    def required_path(self):
-        return (self.DIR_TEMPLATE, self.DIR_ADDON, self.cluster_template_path)
+    def required_paths(self):
+        return (
+            self.DIR_TEMPLATE,
+            self.DIR_ADDON,
+            self.cluster_template_path,
+        )
 
     def __initialize_templates(self, force):
         from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
@@ -220,8 +229,11 @@ class Build(Command):
     ensure_aws_facts = ensure_aws_facts
 
     @property
-    def required_path(self):
-        return super().required_path + (self.DIR_TMP, self.current_vars_dir)
+    def required_paths(self):
+        return super().required_paths + (
+            self.DIR_TMP,
+            self.current_vars_dir,
+        )
 
     def run(self):
         logger.info('%s.run...', self.get_name())
@@ -259,8 +271,8 @@ class Build(Command):
 class Diff(Command):
 
     @property
-    def required_path(self):
-        return super().required_path + (
+    def required_paths(self):
+        return super().required_paths + (
             self.DIR_TMP,
             self.template_rendered_path,
         )
@@ -299,8 +311,8 @@ class Apply(Command):
     ensure_state_store = ensure_state_store
 
     @property
-    def required_path(self):
-        return super().required_path + (self.template_rendered_path, )
+    def required_paths(self):
+        return super().required_paths + (self.template_rendered_path, )
 
     def run(self):
         logger.info('%s.run...', self.get_name())
@@ -324,8 +336,8 @@ class Install(Command):
     def run(self):
         logger.info('%s.run...', self.get_name())
 
-        for addon in os.listdir(ADDON_DIR):
-            addon_path = os.path.join(ADD_DIR, addon)
+        for addon in os.listdir(self.DIR_ADDON):
+            addon_path = os.path.join(self.DIR_ADDON, addon)
             cmd = 'apply -f %s' % addon_path
             logger.info('doing -> %s', cmd)
             logger.info(self._kubectl_cmd(cmd))
