@@ -13,13 +13,11 @@ import yaml
 from botocore.errorfactory import ClientError
 from jinja2 import Template
 
+from . import init_logger
 from .aws_facts import get_vpc_facts
 from .utils import color_diff
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
-BOTO_LOGGER_NAME = 'botocore'
-logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.CRITICAL)  # boto logging is annony and too verbose
 
 CWD = os.getcwd()
 TEMPLATE_DIR = os.path.join(CWD, 'templates')
@@ -38,9 +36,7 @@ class KopsRenderer(object):
     vpc_facts = None
 
     def __init__(self, env, account_name, vpc_id, region='ap-southeast-2', debug=False):
-        if debug is True:
-            logger.setLevel(logging.DEBUG)
-            logging.getLogger(BOTO_LOGGER_NAME).setLevel(logging.DEBUG)
+        init_logger(debug)
 
         if not (env and account_name and vpc_id):
             raise ValueError(
