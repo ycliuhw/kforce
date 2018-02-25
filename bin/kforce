@@ -10,5 +10,5 @@ if __name__ == '__main__':
         p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
         # sys.path.insert(0, os.path.join(os.path.abspath('kforce'), '..'))
         sys.path.insert(0, p)
-    from kforce.commands import Commands
-    fire.Fire(Commands)
+    from kforce.commands import CommandFactory
+    fire.Fire(CommandFactory)

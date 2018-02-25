@@ -339,7 +339,7 @@ class Install(Command):
             logger.info(self._kubectl_cmd(cmd))
 
 
-class Commands(object):
+class CommandFactory(object):
 
     __enabled_cmds = (
         New,

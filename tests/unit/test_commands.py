@@ -9,7 +9,7 @@ class TestCommands(TestCase):
 
     def setUp(self):
         params = dict(env='s', account_name='acc1', vpc_id='vpc-xxxx')
-        self.cmd = commands.Commands(**params)
+        self.cmd = commands.CommandFactory(**params)
 
     def test_register(self):
         cmds = [
