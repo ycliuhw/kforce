@@ -12,3 +12,4 @@ pytest-coverage
 pytest-spec
 moto
 pytest-watch==4.1.0
+mockfs==1.0.2
