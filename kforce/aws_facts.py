@@ -1,12 +1,12 @@
-import boto3
+import boto3  # pragma: no cover
 
 SUBNET_GROUPS = (
     'public',
     'private',
-)
+)  # pragma: no cover
 
 
-def check_rt_internet_facing(facing, route_table):
+def check_rt_internet_facing(facing, route_table):  # pragma: no cover
     assert facing in SUBNET_GROUPS, 'facing has to be in %s' % SUBNET_GROUPS
     routes_facing_igw = [
         route for route in route_table.routes
@@ -31,7 +31,7 @@ def check_rt_internet_facing(facing, route_table):
         return len(routes_facing_igw) == 0 and len(routes_facing_nat) > 0, nat_id  # yapf: disable
 
 
-def get_vpc_facts(vpc_id):
+def get_vpc_facts(vpc_id):  # pragma: no cover
     ec2_c = boto3.resource('ec2')
     vpc_c = ec2_c.Vpc(id=vpc_id)
 

@@ -22,21 +22,25 @@ install-deps: ensure_venv
 
 .PHONY: isort
 isort:
-	isort --recursive --quiet kforce/ bin/ tests/  # --check-only
+	. $(virtualenv_dir)/bin/activate; isort --recursive --quiet kforce/ bin/ tests/  # --check-only
 
 
 .PHONY: yapf
 yapf:
-	yapf --recursive --in-place kforce/ bin/ tests/ setup.py conftest.py
+	. $(virtualenv_dir)/bin/activate; yapf --recursive --in-place kforce/ bin/ tests/ setup.py conftest.py
 
 
 .PHONY: pytest
 pytest:
-	py.test --spec --cov=kforce --cov-report html --cov-report term tests
+	. $(virtualenv_dir)/bin/activate; py.test --spec --cov=kforce --cov-report html --cov-report term tests
 
 
 .PHONY: test
-test: isort yapf  pytest
+test: isort yapf pytest
+
+.PHONY: test-watch
+test-watch:
+	. $(virtualenv_dir)/bin/activate; ptw --onpass "say passed" --onfail "say failed"
 
 
 .PHONY: test
@@ -72,6 +76,10 @@ create_access_key:
 	. $(virtualenv_dir)/bin/activate; aws iam create-access-key --user-name $(kops_iam_id)
 
 
+.PHONY: new  # initialize config for a new cluster (force=[True|False] - overwrite existing files or not)
+new:
+	. $(virtualenv_dir)/bin/activate; ./bin/kforce new --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug) $(force)
+
 .PHONY: build
 build:
 	. $(virtualenv_dir)/bin/activate; ./bin/kforce build --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
@@ -85,3 +93,8 @@ diff:
 .PHONY: apply
 apply:
 	. $(virtualenv_dir)/bin/activate; ./bin/kforce apply --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
+
+
+.PHONY: install_addons
+install_addons:
+	. $(virtualenv_dir)/bin/activate; ./bin/kforce install_addons --account-name=$(account_name) --env=$(env) --vpc-id=$(vpc_id) --region=$(region) --debug=$(debug)
