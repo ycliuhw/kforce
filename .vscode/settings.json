@@ -2,11 +2,11 @@
   "files.exclude": {
     "**/*.pyc": true
   },
-  "python.pythonPath": "${workspaceFolder}/venv/bin/python",
+  "python.pythonPath": "${workspaceRoot}/venv/bin/python",
   "python.formatting.provider": "yapf",
   "python.formatting.yapfArgs": [
     "--style",
     "${workspaceRoot}/.style.yapf",
   ],
-  "restructuredtext.workspaceRoot": "/Users/kelvin.liu/Code/OSS/kforce"
+  "restructuredtext.workspaceRoot": "${workspaceRoot}/"
 }

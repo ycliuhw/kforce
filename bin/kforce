@@ -6,10 +6,9 @@ import sys
 import fire
 
 if __name__ == '__main__':
-    if os.environ.get('MODE') == 'dev':
+    if os.environ.get('KFORCE_MODE') == 'dev':
         p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
         # sys.path.insert(0, os.path.join(os.path.abspath('kforce'), '..'))
         sys.path.insert(0, p)
-    from kforce.renderer import KopsRenderer  # noqa
-
-    fire.Fire(KopsRenderer)
+    from kforce.commands import CommandFactory
+    fire.Fire(CommandFactory)
