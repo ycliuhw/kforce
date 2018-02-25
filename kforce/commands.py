@@ -173,6 +173,8 @@ class Command(object):
 
 class New(Command):
 
+    DIR_RAW_TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
+
     @property
     def required_paths(self):
         return (
@@ -182,10 +184,9 @@ class New(Command):
         )
 
     def __initialize_templates(self, force):
-        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
         to_dir = self.DIR_TEMPLATE
         self._ensure_dir(to_dir, force=force)
-        file_list = os.listdir(from_dir)
+        file_list = os.listdir(self.DIR_RAW_TEMPLATE)
         if force is False:
             try:
                 existing_files = os.listdir(to_dir)
@@ -199,9 +200,9 @@ class New(Command):
                 ...
 
         # ensure template
-        logger.info('copying templates ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
+        logger.info('copying templates to ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
         shutil.rmtree(to_dir)
-        shutil.copytree(from_dir, to_dir)
+        shutil.copytree(self.DIR_RAW_TEMPLATE, to_dir)
 
         # ensure addon dir
         self._ensure_dir(self.DIR_ADDON, force=force)
