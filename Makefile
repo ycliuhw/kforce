@@ -38,6 +38,10 @@ pytest:
 .PHONY: test
 test: isort yapf pytest
 
+.PHONY: test-watch
+test-watch:
+	. $(virtualenv_dir)/bin/activate; ptw --onpass "say passed" --onfail "say failed"
+
 
 .PHONY: test
 pypi-upload:
