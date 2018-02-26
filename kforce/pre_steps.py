@@ -2,6 +2,8 @@ import logging
 import os
 import re
 import shutil
+from pprint import pformat
+from base64 import urlsafe_b64encode
 
 import boto3
 import yaml
@@ -97,8 +99,13 @@ def ensure_ssh_pair(self):
         self._kops_cmd(cmd)
 
     def is_kops_secret_ssh_key_exits():
-        cmd = 'get secret --type SSHPublicKey {kops_u} '.format(kops_u=kops_default_admin_name)
-        return kops_default_admin_name in (self._kops_cmd(cmd) or '')
+        try:
+            cmd = 'get secret --type SSHPublicKey {kops_u} '.format(kops_u=kops_default_admin_name)
+            return kops_default_admin_name in (self._kops_cmd(cmd) or '')
+        except RuntimeError as e:
+            if 'not found' in e.args[0]:
+                return False
+            raise e
 
     if not is_kops_secret_ssh_key_exits():
         create_kops_secret_ssh_key()
