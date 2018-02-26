@@ -145,6 +145,7 @@ class Command(object):
         exitcode, data = getstatusoutput(cmd_str)
         logger.debug('exitcode -> %s, data -> %s', exitcode, data)
         if exitcode != 0:
+            logger.error('cmd -> %s, exitcode -> %s', cmd_str, exitcode)
             raise RuntimeError(data)
         return data
 
@@ -173,6 +174,8 @@ class Command(object):
 
 class New(Command):
 
+    DIR_RAW_TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
+
     @property
     def required_paths(self):
         return (
@@ -182,10 +185,9 @@ class New(Command):
         )
 
     def __initialize_templates(self, force):
-        from_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_templates')
         to_dir = self.DIR_TEMPLATE
         self._ensure_dir(to_dir, force=force)
-        file_list = os.listdir(from_dir)
+        file_list = os.listdir(self.DIR_RAW_TEMPLATE)
         if force is False:
             try:
                 existing_files = os.listdir(to_dir)
@@ -199,9 +201,9 @@ class New(Command):
                 ...
 
         # ensure template
-        logger.info('copying templates ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
+        logger.info('copying templates to ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
         shutil.rmtree(to_dir)
-        shutil.copytree(from_dir, to_dir)
+        shutil.copytree(self.DIR_RAW_TEMPLATE, to_dir)
 
         # ensure addon dir
         self._ensure_dir(self.DIR_ADDON, force=force)
@@ -266,6 +268,8 @@ class Build(Command):
 
 class Diff(Command):
 
+    ensure_state_store = ensure_state_store
+
     @property
     def required_paths(self):
         return super().required_paths + (
@@ -298,12 +302,15 @@ class Diff(Command):
             sys.stdout.write('\n' + line)
 
     def __get_current_cluster_state(self):
-        return self._kops_cmd('get -o yaml')
+        try:
+            return self._kops_cmd('get -o yaml')
+        except RuntimeError as e:
+            logger.warn('Either cluster `%s` does not exist(new cluster) or something wrong', self.cluster_name)
+            return e.args[0]
 
 
 class Apply(Command):
 
-    ensure_ssh_pair = ensure_ssh_pair
     ensure_state_store = ensure_state_store
 
     @property
@@ -315,6 +322,9 @@ class Apply(Command):
 
         cmd = 'replace -f %s  --force' % self.template_rendered_path
         self._kops_cmd(cmd)
+
+        # `ensure_ssh_pair` should be done after 'kops replace' and before 'kops apply'
+        ensure_ssh_pair(self)
 
         cmd = 'update cluster  --yes'
         self._kops_cmd(cmd)
