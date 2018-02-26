@@ -1,3 +1,4 @@
+import logging
 import os
 from importlib import import_module
 from unittest import TestCase
@@ -6,6 +7,9 @@ from unittest.mock import MagicMock, create_autospec
 import mockfs
 import pytest
 from kforce import commands
+from mock import patch
+
+logger = logging.getLogger(__name__)
 
 
 class TestCommands(TestCase):
@@ -30,19 +34,25 @@ class TestCommands(TestCase):
             assert isinstance(c.__self__, c_raw)
 
 
-class TestCommand(TestCase):
+class BaseCommandClient(TestCase):
 
-    def setUp(self):
+    def setUp(self, klass):
         self.mfs = mockfs.replace_builtins()
 
         params = dict(env='s', account_name='acc1', vpc_id='vpc-xxxx')
-        self.c = commands.Command(**params)
+        self.c = klass(**params)
 
         for p in self.c.required_paths:
             self.mfs.add_entries({p: 'magic'})
 
     def tearDown(self):
         mockfs.restore_builtins()
+
+
+class TestCommand(BaseCommandClient):
+
+    def setUp(self):
+        super().setUp(commands.Command)
 
     def test_env_check(self):
         params = dict(env='this is not a valid env', account_name='acc1', vpc_id='vpc-xxxx')
@@ -68,42 +78,3 @@ class TestCommand(TestCase):
         getattr(c, 'run').assert_called_once()
         for i in ensure_func_names:
             getattr(c, i).assert_called_once()
-
-
-class TestNew(TestCase):
-
-    def setUp(self):
-        self.cwd = os.getcwd()
-        templates = [
-            {
-                'path': '%s/kforce/raw_templates/cluster.yaml' % self.cwd
-            }, {
-                'path': '%s/kforce/raw_templates/values.yaml.j2' % self.cwd
-            }
-        ]
-        for t in templates:
-            with open(t['path']) as f:
-                t['content'] = f.read()
-
-        self.mfs = mockfs.replace_builtins()
-
-        self.mfs.add_entries({t['path']: t['content'] for t in templates})
-
-        self.mfs.add_entries({self.cwd + 'tmp': 'magic'})
-        params = dict(env='s', account_name='acc1', vpc_id='vpc-xxxx')
-        self.c = commands.New(**params)
-
-        for p in self.c.required_paths + [
-            '%s/kforce/raw_templates/cluster.yaml' % self.cwd,
-            '%s/kforce/raw_templates/values.yaml.j2' % self.cwd
-        ]:
-            self.mfs.add_entries({p: 'magic'})
-
-    def tearDown(self):
-        mockfs.restore_builtins()
-
-    # def test_all_path_created(self):
-    #     # self.c.run()
-    #     # files = ['templates/cluster.yaml', 'templates/values.yaml.j2']
-    #     # dirs = ['templates/addons']
-    #     print(os.listdir(self.cwd))
