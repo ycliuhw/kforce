@@ -323,6 +323,7 @@ class Apply(Command):
         cmd = 'replace -f %s  --force' % self.template_rendered_path
         self._kops_cmd(cmd)
 
+        # `ensure_ssh_pair` should be done after 'kops replace' and before 'kops apply'
         ensure_ssh_pair(self)
 
         cmd = 'update cluster  --yes'
