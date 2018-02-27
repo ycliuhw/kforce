@@ -84,6 +84,9 @@ class Command(object):
 
         self.current_vars_dir = os.path.join(self.DIR_ROOT, 'vars', self.account_name)
         self.current_value_file_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
+        self.current_ig_dir = os.path.join(self.current_vars_dir, '%s-ig' % self.env)
+        self.current_snippets_dir = os.path.join(self.current_vars_dir, '%s-snippets' % self.env)
+        self.cluster_snippets_dir = os.path.join(self.DIR_TEMPLATE, 'snippets')
         self.cluster_template_path = os.path.join(self.DIR_TEMPLATE, 'cluster.yaml')
 
     def _run(self, *args, **kwargs):
@@ -171,6 +174,12 @@ class Command(object):
             args.insert(0, kubectl)
         return self._sh(args)
 
+    def list_dir_safe(self, path):
+        try:
+            return os.listdir(path)
+        except (FileNotFoundError, NotADirectoryError):
+            return []
+
 
 class New(Command):
 
@@ -212,7 +221,8 @@ class New(Command):
         # ensure vars dir
         self._ensure_dir(self.current_vars_dir, force=force)
         self._ensure_dir(os.path.join(self.current_vars_dir, '%s-addons' % self.env), force=force)
-        self._ensure_dir(os.path.join(self.current_vars_dir, '%s-snippets' % self.env), force=force)
+        self._ensure_dir(os.path.join(self.current_snippets_dir), force=force)
+        self._ensure_dir(self.current_ig_dir, force=force)
         self._ensure_file(os.path.join(self.current_vars_dir, '%s.yaml' % self.env), force=force)
 
     def run(self, force=False):
@@ -238,12 +248,18 @@ class Build(Command):
 
         cmd = 'toolbox template --format-yaml=true '
         cmd += ''.join([' --values ' + f for f in [self.__build_value_file(), self.current_value_file_path]])
-        # cmd += ''.join([' --template ' + f for f in self.root_templates_paths])
-        cmd += ' --template %s' % self.cluster_template_path
-        snippets_path = os.path.join(self.current_vars_dir, self.env + '-snippets')
+        cmd += ''.join(
+            [
+                ' --template ' + f for f in (self.cluster_template_path, self.current_ig_dir) \
+                if os.path.isfile(f) or self.list_dir_safe(f)
+            ]
+        )
+        # cmd += ' --template %s' % self.cluster_template_path
+
+        cmd += ' --snippets ' + self.cluster_snippets_dir
         try:
-            os.listdir(snippets_path)
-            cmd += ' --snippets ' + snippets_path
+            os.listdir(self.current_snippets_dir)
+            cmd += ' --snippets ' + self.current_snippets_dir
         except FileNotFoundError:
             ...
         data = self._kops_cmd(cmd)
