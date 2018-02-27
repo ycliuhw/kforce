@@ -1,0 +1,6 @@
+kubelet:
+  featureGates:
+    Accelerators: "true"
+hooks:
+  - execContainer:
+      image: kopeio/nvidia-bootstrap:1.6
