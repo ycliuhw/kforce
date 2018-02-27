@@ -27,3 +27,5 @@ kforce.egg-info
 templates/
 vars/
 __generated__/
+
+.mypy_cache
