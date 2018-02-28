@@ -73,13 +73,13 @@ class Command(object):
         self.vpc_id = vpc_id
         self.region = region
 
-        self.cluster_name = '{}-{}.k8s.local'.format(self.account_name, self.env)
+        self.cluster_name = '{}-{}.k8s.local'.format(self.env, self.account_name)
 
         self.state_store_name = '%s-k8s-state-store' % self.account_name  # share same bucket for cluster in same account
         self.state_store_uri = 's3://%s' % self.state_store_name
 
         self.template_rendered_path = os.path.join(
-            self.DIR_ROOT, '__generated__', '{}-{}.yaml'.format(self.account_name, self.env)
+            self.DIR_ROOT, '__generated__', '{}-{}.yaml'.format(self.env, self.account_name)
         )
 
         self.current_vars_dir = os.path.join(self.DIR_ROOT, 'vars', self.account_name)
