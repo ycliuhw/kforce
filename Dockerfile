@@ -5,7 +5,8 @@ RUN apk --update add --virtual .build-deps build-base libffi-dev openssl-dev lin
 
 RUN pip3 install -U pip setuptools
 
-ADD requirements /opt/app/requirements
+ADD . /opt/app/
 WORKDIR /opt/app
 RUN pip3 install -r requirements/dev.txt \
     && apk del .build-deps
+
