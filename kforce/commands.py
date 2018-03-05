@@ -230,6 +230,7 @@ class New(Command):
         self.__initialize_templates(force=force)
         self.__initialize_vars(force=force)
         self._ensure_dir(os.path.join(self.DIR_ROOT, '__generated__'), force=force)
+        self._ensure_dir(self.DIR_TMP, force=force)
 
 
 class Build(Command):
