@@ -83,9 +83,9 @@ class Command(object):
         )
 
         self.current_vars_dir = os.path.join(self.DIR_ROOT, 'vars', self.account_name)
-        self.current_value_file_path = os.path.join(self.current_vars_dir, '%s.yaml' % self.env)
-        self.current_ig_dir = os.path.join(self.current_vars_dir, '%s-ig' % self.env)
-        self.current_snippets_dir = os.path.join(self.current_vars_dir, '%s-snippets' % self.env)
+        self.current_value_file_path = os.path.join(self.current_vars_dir, '{}'.format(self.env), 'values.yaml')
+        self.current_ig_dir = os.path.join(self.current_vars_dir, '{}'.format(self.env), 'ig')
+        self.current_snippets_dir = os.path.join(self.current_vars_dir, '{}'.format(self.env), 'snippets')
         self.cluster_snippets_dir = os.path.join(self.DIR_TEMPLATE, 'snippets')
         self.cluster_template_path = os.path.join(self.DIR_TEMPLATE, 'cluster.yaml')
 
@@ -220,10 +220,10 @@ class New(Command):
     def __initialize_vars(self, force):
         # ensure vars dir
         self._ensure_dir(self.current_vars_dir, force=force)
-        self._ensure_dir(os.path.join(self.current_vars_dir, '%s-addons' % self.env), force=force)
+        self._ensure_dir(os.path.join(self.current_vars_dir, '{}'.format(self.env), 'addons'), force=force)
         self._ensure_dir(os.path.join(self.current_snippets_dir), force=force)
         self._ensure_dir(self.current_ig_dir, force=force)
-        self._ensure_file(os.path.join(self.current_vars_dir, '%s.yaml' % self.env), force=force)
+        self._ensure_file(os.path.join(self.current_vars_dir, '{}'.format(self.env), 'values.yaml'), force=force)
 
     def run(self, force=False):
         logger.info('%s.run: force -> %s', self.get_name(), force)

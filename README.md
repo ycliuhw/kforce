@@ -90,52 +90,60 @@ AWS_PROFILE=[kops] kforce apply --account-name=[aws-account1] --env=[s|p|u|m] --
 ----
 
 ```text
+.
 ├── Makefile
 ├── README.md
-├── addons  # some required pre-installed addon packages (monitoring, logging, helm server - tiller etc.)
-│   ├── README.md
-│   └── cluster_role.yaml
-├── __generated__  # WARNING: supposed for version control auto-generated templates(`GitOps` -> version controlled infra), DO NOT make any changes here
+├── __generated__
 │   ├── README.md
 │   ├── cre-m.yaml
-│   ├── aws-account1-s.yaml
+│   ├── domainmobile-p.yaml
+│   ├── domainnonprod-s.yaml
 │   └── domainsandbox-s.yaml
-├── bin
-│   └── kforce
-├── kforce
-│   ├── aws_facts.py
-│   ├── renderer.py
-│   └── utils.py
+├── addons
+│   ├── README.md
+│   └── cluster_role.yaml
+├── img
+│   └── make-diff.png
 ├── requirements.txt
-├── setup.cfg
-├── templates  # cluster global definition
-│   ├── cluster.yaml  # template
-│   ├── values.yaml.j2  # configure
-│   └── addons
-│       ├── README.md
-│       ├── autoscaler.yaml
-│       ├── dashboard.yaml
-│       ├── external-dns.yaml
-│       ├── fluentd.yaml
-│       ├── ingress-nginx-external.yaml
-│       └── ingress-nginx-internal.yaml
-└── vars  # new cluster configure customization goes here
-    ├── aws-account2
-    │   └── m.yaml
-    ├── aws-account1
-    │   ├── m-addons
-    │   │   ├── grafama.yaml
-    │   │   ├── influxdb.yaml
-    │   │   ├── jenkins.yaml
-    │   │   └── prometheus.yaml
-    │   ├── s.yaml  # IMPORTANT: `aws-account1-[s]taging` cluster configure - naming convention ([env].yaml)
-    │   ├── s-snippets  # IMPORTANT: any additional `instance group` defines here(high memory, spot, etc.)
-    │   │   └── ig-spot.yaml  # spot instance group definition
-    │   │   └── ig-high-memory.yaml  # high memory instance group definition
-    │   ├── u.yaml  # `aws-account1-[u]at` cluster with standard 3*node IG and spot IG
-    │   ├── u-snippets
-    │   │   └── ig-spot.yaml
-    │   └── m.yaml  # `aws-account1-[m]anagement` cluster with standard 3*node IG
-    └── aws-account3
-        └── s.yaml
+├── templates
+│   ├── addons
+│   │   ├── README.md
+│   │   ├── autoscaler.yaml
+│   │   ├── dashboard.yaml
+│   │   ├── external-dns.yaml
+│   │   ├── fluentd.yaml
+│   │   ├── ingress-nginx-external.yaml
+│   │   └── ingress-nginx-internal.yaml
+│   ├── cluster.yaml
+│   ├── snippets
+│   │   └── gpu.yaml
+│   └── values.yaml.j2
+└── vars
+    ├── aws-account-1
+    │   ├── m
+    │   │   ├── addons
+    │   │   ├── ig
+    │   │   │   ├── m-class-ondemand.yaml
+    │   │   │   └── m-class-spot.yaml
+    │   │   ├── snippets
+    │   │   └── values.yaml
+    │   ├── p
+    │   │   ├── addons
+    │   │   ├── ig
+    │   │   ├── snippets
+    │   │   └── values.yaml
+    │   └── s
+    ├── aws-account-2
+    │   ├── m
+    │   │   ├── addons
+    │   │   ├── ig
+    │   │   │   ├── m-class-ondemand.yaml
+    │   │   │   └── m-class-spot.yaml
+    │   │   ├── snippets
+    │   │   └── values.yaml
+    │   ├── p
+    │   │   ├── addons
+    │   │   ├── ig
+    │   │   ├── snippets
+    │   │   └── values.yaml
 ```

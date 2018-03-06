@@ -4,7 +4,7 @@ from setuptools import setup
 from pip.req import parse_requirements
 from pip.download import PipSession
 
-VERSION = "0.1.24"
+VERSION = "0.1.25"
 
 scripts = ["bin/kforce"]
 
@@ -17,7 +17,7 @@ if __name__ == "__main__":
         author="Yang Kelvin Liu",
         author_email="ycliuhw@gmail.com",
         license="Apache License 2.0",
-        url="https://github.com/ycliuhw/kforce",
+        #url="https://github.com/ycliuhw/kforce",
         description="KOPS template automation",
         packages=["kforce"],
         scripts=scripts,
