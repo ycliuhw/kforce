@@ -191,24 +191,3 @@ spec:
   rootVolumeSize: {{.cluster.masterRootVolumeSize}}
   subnets:
   - {{.awsRegion}}c
-
----
-
-apiVersion: kops/v1alpha2
-kind:       InstanceGroup
-metadata:
-  labels:
-    kops.k8s.io/cluster: {{.cluster.name}}
-  name: nodes
-spec:
-  nodeLabels:
-    kops.k8s.io/instancegroup: nodes
-  maxSize:     3
-  minSize:     3
-  role:        Node
-  image:       {{.ami}}
-  machineType: {{.cluster.instanceType.defaultNodeInstanceGroup}}
-  subnets:
-  - {{.awsRegion}}a
-  - {{.awsRegion}}b
-  - {{.awsRegion}}c
