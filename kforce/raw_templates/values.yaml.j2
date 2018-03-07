@@ -10,7 +10,7 @@ vpcCIDR:              ""
 awsRegion:            ap-southeast-2
 
 cluster:
-  name: {{account_name}}-{{env}}.k8s.local
+  name: {{env}}-{{account_name}}.k8s.local
   instanceType:
     bastion:                  t2.micro
     master:                   t2.small
