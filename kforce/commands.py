@@ -40,6 +40,7 @@ class Command(object):
     DIR_ROOT = os.getcwd()
     DIR_TEMPLATE = os.path.join(DIR_ROOT, 'templates')
     DIR_ADDON = os.path.join(DIR_TEMPLATE, 'addons')
+    DIR_SNIPPETS = os.path.join(DIR_TEMPLATE, 'snippets')
     DIR_TMP = os.path.join(DIR_ROOT, 'tmp')
 
     @property
@@ -47,6 +48,7 @@ class Command(object):
         return (
             self.DIR_TEMPLATE,
             self.DIR_ADDON,
+            self.DIR_SNIPPETS,
             self.current_value_file_path,
             self.cluster_template_path,
         )
@@ -190,6 +192,7 @@ class New(Command):
         return (
             self.DIR_TEMPLATE,
             self.DIR_ADDON,
+            self.DIR_SNIPPETS,
             self.cluster_template_path,
         )
 
@@ -216,6 +219,7 @@ class New(Command):
 
         # ensure addon dir
         self._ensure_dir(self.DIR_ADDON, force=force)
+        self._ensure_dir(self.DIR_SNIPPETS, force=force)
 
     def __initialize_vars(self, force):
         # ensure vars dir
