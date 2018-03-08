@@ -49,8 +49,6 @@ class Command(object):
             self.DIR_TEMPLATE,
             self.DIR_ADDON,
             self.DIR_SNIPPETS,
-            self.current_value_file_path,
-            self.cluster_template_path,
         )
 
     ensure_region = ensure_region
@@ -80,9 +78,15 @@ class Command(object):
         self.state_store_name = '%s-k8s-state-store' % self.account_name  # share same bucket for cluster in same account
         self.state_store_uri = 's3://%s' % self.state_store_name
 
-        self.template_rendered_path = os.path.join(
-            self.DIR_ROOT, '__generated__', '{}-{}.yaml'.format(self.env, self.account_name)
+        self.template_rendered_dir = os.path.join(
+            self.DIR_ROOT, '__generated__/{}/{}'.format(self.account_name, self.env)
         )
+
+        self.template_rendered_path = os.path.join(
+            self.template_rendered_dir, '{}-{}.yaml'.format(self.env, self.account_name)
+        )
+
+        self.addons_rendered_dir = os.path.join(self.template_rendered_dir, 'addons')
 
         self.current_vars_dir = os.path.join(self.DIR_ROOT, 'vars', self.account_name)
         self.current_value_file_path = os.path.join(self.current_vars_dir, '{}'.format(self.env), 'values.yaml')
@@ -90,6 +94,7 @@ class Command(object):
         self.current_snippets_dir = os.path.join(self.current_vars_dir, '{}'.format(self.env), 'snippets')
         self.cluster_snippets_dir = os.path.join(self.DIR_TEMPLATE, 'snippets')
         self.cluster_template_path = os.path.join(self.DIR_TEMPLATE, 'cluster.yaml')
+        self.cluster_template_valuej2 = os.path.join(self.DIR_TEMPLATE, 'values.yaml.j2') 
 
     def _run(self, *args, **kwargs):
         self.__pre_run()
@@ -193,7 +198,6 @@ class New(Command):
             self.DIR_TEMPLATE,
             self.DIR_ADDON,
             self.DIR_SNIPPETS,
-            self.cluster_template_path,
         )
 
     def __initialize_templates(self, force):
@@ -212,14 +216,22 @@ class New(Command):
             except AssertionError:
                 ...
 
+        # removing files if exists
+        
+        files = [ self.cluster_template_valuej2, self.cluster_template_path ]
+        for f in files:
+            if os.path.isfile(f):
+                os.unlink(f, dir_fd=None)
+        
         # ensure template
         logger.info('copying templates to ->\n\t%s', '\n\t'.join([os.path.join(to_dir, f) for f in file_list]))
-        shutil.rmtree(to_dir)
-        shutil.copytree(self.DIR_RAW_TEMPLATE, to_dir)
-
+        """ Don't want to delete addons folder """
+         
+        os.popen('cp -rf {}/* {}'.format(self.DIR_RAW_TEMPLATE, to_dir)) 
+        # shutil.copytree(self.DIR_RAW_TEMPLATE, to_dir)
         # ensure addon dir
-        self._ensure_dir(self.DIR_ADDON, force=force)
-        self._ensure_dir(self.DIR_SNIPPETS, force=force)
+        self._ensure_dir(self.DIR_ADDON)
+        self._ensure_dir(self.DIR_SNIPPETS)
 
     def __initialize_vars(self, force):
         # ensure vars dir
@@ -233,7 +245,7 @@ class New(Command):
         logger.info('%s.run: force -> %s', self.get_name(), force)
         self.__initialize_templates(force=force)
         self.__initialize_vars(force=force)
-        self._ensure_dir(os.path.join(self.DIR_ROOT, '__generated__'), force=force)
+        self._ensure_dir(os.path.join(self.DIR_ROOT, '__generated__/{}/{}/addons'.format(self.account_name, self.env)), force=force)
 
 
 class Build(Command):
@@ -244,32 +256,57 @@ class Build(Command):
     def required_paths(self):
         return super().required_paths + (
             self.DIR_TMP,
+            self.current_value_file_path,
+            self.cluster_template_path,
             self.current_vars_dir,
         )
 
     def run(self):
         logger.info('%s.run...', self.get_name())
 
-        cmd = 'toolbox template --format-yaml=true '
-        cmd += ''.join([' --values ' + f for f in [self.__build_value_file(), self.current_value_file_path]])
-        cmd += ''.join(
-            [
-                ' --template ' + f for f in (self.cluster_template_path, self.current_ig_dir) \
-                if os.path.isfile(f) or self.list_dir_safe(f)
-            ]
-        )
-        # cmd += ' --template %s' % self.cluster_template_path
+        def render_cluster_template(built_value_file):
+            cmd = 'toolbox template --format-yaml=true '
+            cmd += ''.join([' --values ' + f for f in [built_value_file, self.current_value_file_path]])
+            cmd += ''.join(
+                [
+                    ' --template ' + f for f in (self.cluster_template_path, self.current_ig_dir) \
+                    if os.path.isfile(f) or self.list_dir_safe(f)
+                ]
+            )
+            # cmd += ' --template %s' % self.cluster_template_path
+    
+            cmd += ' --snippets ' + self.cluster_snippets_dir
+            try:
+                os.listdir(self.current_snippets_dir)
+                cmd += ' --snippets ' + self.current_snippets_dir
+            except FileNotFoundError:
+                ...
+            data = self._kops_cmd(cmd)
+            with open(self.template_rendered_path, 'w') as f:
+                f.write('---\n\n')
+                f.write(data[data.index('apiVersion'):])
+            return
+        
+        def render_addons_template(built_value_file):
+            try:
+                for f in os.listdir(self.DIR_ADDON): 
+                    cmd = 'toolbox template --format-yaml=true '
+                    cmd += ''.join([' --values ' + built_value_file])
+                    cmd += ''.join(
+                        [
+                            ' --template ' + '{}/{}'.format(self.DIR_ADDON, f)
+                        ]
+                    )
+                    cmd += ''.join(' --output ' + '{}/{}'.format(self.addons_rendered_dir, f))
+                    data = self._kops_cmd(cmd)
+            except FileNotFoundError:
+                ...
+            return    
 
-        cmd += ' --snippets ' + self.cluster_snippets_dir
-        try:
-            os.listdir(self.current_snippets_dir)
-            cmd += ' --snippets ' + self.current_snippets_dir
-        except FileNotFoundError:
-            ...
-        data = self._kops_cmd(cmd)
-        with open(self.template_rendered_path, 'w') as f:
-            f.write('---\n\n')
-            f.write(data[data.index('apiVersion'):])
+        built_value_path = self.__build_value_file()
+        render_cluster_template(built_value_path)
+        render_addons_template(built_value_path)
+
 
     def __build_value_file(self):
         with open(os.path.join(self.DIR_TEMPLATE, 'values.yaml.j2')) as f:
@@ -295,6 +332,8 @@ class Diff(Command):
         return super().required_paths + (
             self.DIR_TMP,
             self.template_rendered_path,
+            self.current_value_file_path,
+            self.cluster_template_path,
         )
 
     def run(self):
@@ -362,8 +401,8 @@ class Install(Command):
     def run(self):
         logger.info('%s.run...', self.get_name())
 
-        for addon in os.listdir(self.DIR_ADDON):
-            addon_path = os.path.join(self.DIR_ADDON, addon)
+        for addon in os.listdir(self.addons_rendered_dir):
+            addon_path = os.path.join(self.addons_rendered_dir, addon)
             cmd = 'apply -f %s' % addon_path
             logger.info('doing -> %s', cmd)
             logger.info(self._kubectl_cmd(cmd))
