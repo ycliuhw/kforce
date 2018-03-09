@@ -309,13 +309,16 @@ class Build(Command):
 
 
     def __build_value_file(self):
+        with open(self.current_value_file_path) as f:
+            current_value = yaml.load(f)
         with open(os.path.join(self.DIR_TEMPLATE, 'values.yaml.j2')) as f:
             value_template = Template(f.read())
         template_rendered = value_template.render(
             env=self.env,
             account_name=self.account_name,
             state_store_name=self.state_store_name,
-            vpc_facts=yaml.dump(self.vpc_facts, default_flow_style=False)
+            vpc_facts=yaml.dump(self.vpc_facts, default_flow_style=False),
+            current_value=yaml.dump(current_value, default_flow_style=False)
         )
         built_value_file_path = os.path.join(self.DIR_TMP, 'values.yaml')
         with open(built_value_file_path, 'w') as f:

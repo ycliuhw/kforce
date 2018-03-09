@@ -52,7 +52,14 @@ spec:
               "autoscaling:TerminateInstanceInAutoScalingGroup"
           ],
           "Resource": "*"
-        }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+              "sts:AssumeRole" 
+          ],
+          "Resource": "*"
+        },
       ]
   api:
     loadBalancer:
