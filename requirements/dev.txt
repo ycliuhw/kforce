@@ -5,6 +5,7 @@ isort
 ipython
 yapf
 mypy
+pylint
 
 # Testing
 pytest
