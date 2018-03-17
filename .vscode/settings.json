@@ -5,6 +5,7 @@
   "python.pythonPath": "${workspaceFolder}/venv/bin/python",
   "python.formatting.provider": "yapf",
   "python.linting.flake8Enabled": false,
+  "python.linting.pylintEnabled": false,
   "python.formatting.yapfArgs": [
     "--style=${workspaceFolder}/.style.yapf",
   ]
