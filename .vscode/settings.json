@@ -7,6 +7,5 @@
   "python.linting.flake8Enabled": false,
   "python.formatting.yapfArgs": [
     "--style=${workspaceFolder}/.style.yapf",
-    "--in-place kforce/ bin/ tests/ setup.py conftest.py"
   ]
 }
