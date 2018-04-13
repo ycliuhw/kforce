@@ -97,9 +97,7 @@ AWS_PROFILE=[kops] kforce apply --account-name=[aws-account1] --env=[s|p|u|m] --
 │   └── cluster_role.yaml
 ├── __generated__  # WARNING: supposed for version control auto-generated templates(`GitOps` -> version controlled infra), DO NOT make any changes here
 │   ├── README.md
-│   ├── cre-m.yaml
 │   ├── aws-account1-s.yaml
-│   └── domainsandbox-s.yaml
 ├── bin
 │   └── kforce
 ├── kforce
