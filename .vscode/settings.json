@@ -2,11 +2,11 @@
   "files.exclude": {
     "**/*.pyc": true
   },
-  "python.pythonPath": "${workspaceRoot}/venv/bin/python",
+  "python.pythonPath": "${workspaceFolder}/venv/bin/python",
   "python.formatting.provider": "yapf",
+  "python.linting.flake8Enabled": false,
+  "python.linting.pylintEnabled": false,
   "python.formatting.yapfArgs": [
-    "--style",
-    "${workspaceRoot}/.style.yapf",
-  ],
-  "restructuredtext.workspaceRoot": "${workspaceRoot}/"
+    "--style=${workspaceFolder}/.style.yapf",
+  ]
 }

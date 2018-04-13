@@ -1,6 +1,6 @@
 # Kubernetes
 
-![build-status](http://nginx.k8s.domainsecurity.cc/api/badges/ycliuhw/kforce/status.svg?branch=master)
+![build-status](http://nginx.k8s.example.com/api/badges/ycliuhw/kforce/status.svg?branch=master)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
