@@ -77,8 +77,6 @@ AWS_PROFILE=[kops] kforce build --account-name=[aws-account1] --env=[s|p|u|m] --
 AWS_PROFILE=[kops] kforce diff --account-name=[aws-account1] --env=[s|p|u|m] --vpc-id=vpc-xxxx
 ```
 
-![make diff](img/make-diff.png)
-
 #### apply kops template to create the cluster
 
 ```bash
